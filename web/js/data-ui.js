@@ -138,7 +138,9 @@
     if (!text) { q.focus(); return; }
     card.querySelector('.map-go').click();
     const key = b.dataset.addFromMap;
-    addRow(key, key === 'roads' ? { road: text } : { name: text });
+    const district = card.querySelector('.map-district');
+    const name = ((district && district.value) || '') + text; // 受體／測點名稱帶上區鄉鎮
+    addRow(key, key === 'roads' ? { road: text } : { name });
   }));
   $$('[data-clear]').forEach((b) => b.addEventListener('click', () => {
     const k = b.dataset.clear, n = db()[k].length;

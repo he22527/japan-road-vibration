@@ -238,8 +238,20 @@
   // ---------- 位置地圖（Google 地圖嵌入，免金鑰；按「定位」才載入；各分頁共用元件） ----------
   function initMapCard(card) {
     const q = card.querySelector('.map-q');
+    const county = card.querySelector('.map-county');
+    const district = card.querySelector('.map-district');
+    if (county && window.TW_DISTRICTS) {
+      for (const name of Object.keys(window.TW_DISTRICTS)) county.add(new Option(name, name));
+      county.addEventListener('change', () => {
+        district.length = 1; // 保留「區鄉鎮」預設項
+        for (const d of window.TW_DISTRICTS[county.value] || []) district.add(new Option(d, d));
+        if (card.querySelector('.map-frame iframe')) locate();
+      });
+      district.addEventListener('change', () => { if (card.querySelector('.map-frame iframe')) locate(); });
+    }
+    const mapQuery = () => [county && county.value, district && district.value, q.value.trim()].filter(Boolean).join('');
     function locate() {
-      const text = q.value.trim();
+      const text = mapQuery();
       if (!text) { q.focus(); return; }
       const t = card.querySelector('.map-t').value;
       let frame = card.querySelector('.map-frame iframe');

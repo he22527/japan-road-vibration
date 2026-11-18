@@ -176,7 +176,8 @@ input.bad { border-color: var(--fail); }
 .breakdown td:first-child { padding-right: 8px; }
 
 /* 位置地圖 */
-.map-search { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 8px; }
+.map-search { display: flex; flex-wrap: wrap; gap: 8px; }
+.map-search .map-q { flex: 1 1 220px; min-width: 0; }
 .map-search select { width: auto; }
 .map-search button { padding: 7px 14px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); color: var(--ink); white-space: nowrap; }
 .map-search button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
@@ -185,8 +186,7 @@ input.bad { border-color: var(--fail); }
 .map-empty { font-size: 13px; padding: 0 16px; text-align: center; }
 .map-open { display: inline-block; margin-top: 6px; font-size: 13px; color: var(--accent); }
 @media (max-width: 560px) {
-  .map-search { grid-template-columns: 1fr 1fr; }
-  .map-search input { grid-column: 1 / -1; }
+  .map-search .map-q { flex-basis: 100%; }
   .map-frame { height: 260px; }
 }
 
