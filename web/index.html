@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>道路交通振動評估</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>道路交通振動評估</h1>
+      <p class="sub">日本建設省道路交通振動預測模式 · L<sub>V10</sub></p>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- 輸入 -->
+    <form id="form" class="panel inputs" autocomplete="off" novalidate>
+      <section class="card">
+        <h2>案例</h2>
+        <div class="grid g3">
+          <label><span>模擬狀況</span><input name="scenario" placeholder="如：現況晨峰"></label>
+          <label><span>運輸道路</span><input name="road" placeholder="如：台61線"></label>
+          <label><span>路段</span><input name="section" placeholder="如：台64線～南堤聯外道路"></label>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>道路型式</h2>
+        <div class="type-row">
+          <div class="type-pick" id="typePick" role="radiogroup" aria-label="道路型式"></div>
+          <figure class="section-img"><img id="typeImg" alt="斷面示意圖"><figcaption id="typeCap"></figcaption></figure>
+        </div>
+      </section>
+
+      <section class="card" id="planeCard">
+        <h2 id="planeTitle">平面道路</h2>
+        <div class="grid g4">
+          <label><span>車道數 M</span><input name="p.M" type="number" min="1" step="1" value="4"></label>
+          <label><span>小型車 Q<sub>1</sub> (輛/h)</span><input name="p.Q1" type="number" min="0" step="1" value="761"></label>
+          <label><span>大型車 Q<sub>2</sub> (輛/h)</span><input name="p.Q2" type="number" min="0" step="1" value="40"></label>
+          <label><span>平均車速 V (km/h)</span><input name="p.V" type="number" min="0" step="0.1" value="40"></label>
+          <label><span>路面種類</span><select name="p.pavement"><option>瀝青</option><option>混凝土</option></select></label>
+          <label><span>路面平坦性 σ (mm)</span><input name="p.sigma" type="number" min="0" step="0.1" value="5"></label>
+          <label><span>地盤卓越振動數 f (Hz)</span><input name="p.f" type="number" min="0" step="0.1" value="6"></label>
+          <label data-show="H" id="hLabel"><span>填土高度 H (m)</span><input name="p.H" type="number" step="0.1" value="0"></label>
+          <label data-show="soil"><span>地質</span><select name="soil"><option>黏土</option><option>砂質</option></select></label>
+          <label data-show="planePiers"><span>高架橋腳數（定 d）</span><select name="planePiers"><option value="1">1（d = 18）</option><option value="2">2 以上（d = 20）</option></select></label>
+        </div>
+      </section>
+
+      <section class="card" id="elevCard">
+        <h2 id="elevTitle">高架道路</h2>
+        <div class="grid g4">
+          <label><span>車道數 M</span><input name="e.M" type="number" min="1" step="1" value="4"></label>
+          <label><span>小型車 Q<sub>1</sub> (輛/h)</span><input name="e.Q1" type="number" min="0" step="1" value="2118"></label>
+          <label><span>大型車 Q<sub>2</sub> (輛/h)</span><input name="e.Q2" type="number" min="0" step="1" value="295"></label>
+          <label><span>平均車速 V (km/h)</span><input name="e.V" type="number" min="0" step="0.1" value="58.6"></label>
+          <label><span>接縫高低差 H<sub>p</sub> (mm)</span><input name="e.Hp" type="number" min="0" step="0.1" value="5"></label>
+          <label><span>地盤卓越振動數 f (Hz)</span><input name="e.f" type="number" min="0" step="0.1" value="6"></label>
+          <label data-show="elevPiers"><span>橋腳數</span><select name="e.piers"><option value="1">1（d = 18）</option><option value="2">2 以上（d = 20）</option></select></label>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>預測點與評估</h2>
+        <div class="grid g4">
+          <label><span>敏感受體</span><input name="receiver" placeholder="如：瑞平國小"></label>
+          <label><span>距基準點 R (m)</span><input name="R" type="number" step="0.1" value="5">
+            <small>基準點＝最外側車道中心外 5 m</small></label>
+          <label><span>背景振動量 (dB)</span><input name="background" type="number" step="0.1" placeholder="選填"></label>
+          <label><span>噪音管制區</span><select name="zone"><option value="">（不評估）</option><option>第一類</option><option>第二類</option><option>第三類</option><option>第四類</option></select></label>
+          <label><span>時段</span><select name="period"><option>日間</option><option>夜間</option></select></label>
+        </div>
+      </section>
+    </form>
+
+    <!-- 結果 -->
+    <aside class="panel results" aria-live="polite">
+      <section class="card result-card">
+        <h2>預測結果</h2>
+        <div id="errors" class="errors" hidden></div>
+        <div id="resultBody">
+          <div class="hero">
+            <div><span class="hero-label">預測點 L<sub>V10,R</sub></span><span class="hero-val" id="lvR">—</span><span class="unit">dB</span></div>
+            <span class="chip" id="verdict" hidden></span>
+          </div>
+          <table class="breakdown"><tbody id="breakdown"></tbody></table>
+        </div>
+        <div class="actions">
+          <button type="button" id="addBtn" class="primary">加入清單</button>
+        </div>
+      </section>
+    </aside>
+
+    <!-- 清單 -->
+    <section class="panel list card">
+      <div class="list-head">
+        <h2>計算清單 <span id="count" class="muted"></span></h2>
+        <div class="actions">
+          <button type="button" id="csvBtn">匯出 CSV</button>
+          <button type="button" id="clearBtn" class="ghost">清空</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="list-table">
+          <thead><tr>
+            <th>#</th><th>模擬狀況</th><th>道路／路段</th><th>型式</th><th>敏感受體</th>
+            <th class="num">R</th><th class="num">L<sub>V10</sub></th><th class="num">α<sub>l</sub></th>
+            <th class="num">L<sub>V10,R</sub></th><th class="num">合成</th><th class="num">增量</th><th class="num">基準</th><th>判定</th><th></th>
+          </tr></thead>
+          <tbody id="listBody"></tbody>
+        </table>
+        <p id="emptyHint" class="muted empty">尚無資料。調整左側參數後按「加入清單」。</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot muted">公式依 docs/VBA解析.md 第 4.5 節定案版本。清單只存在這台電腦的瀏覽器裡。</footer>
+
+  <script src="js/calc.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
