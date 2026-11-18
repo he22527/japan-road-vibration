@@ -12,7 +12,7 @@
 ## ➡️ 下一步
 1. 使用者試用、回饋介面與欄位
 2. 視需要：從 Excel「道路」「敏感受體」表匯入清單、批次計算、Word 報表輸出
-3. 決定發佈方式（GitHub Pages 或內部共用資料夾）
+3. ~~發佈~~ 已上線 GitHub Pages：https://he22527.github.io/japan-road-vibration/（repo 已轉公開，push 到 main 約 1 分鐘後自動更新）
 
 ## ⚠️ 注意事項
 - 專案放在 OneDrive 同步資料夾，git 已設定 `windows.appendAtomically false`

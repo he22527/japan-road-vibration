@@ -51,7 +51,7 @@
 | 層級 | 平台 | 位置 | 讀取時機 |
 |------|------|------|---------|
 | L1 | 本地（OneDrive） | `agents.md`＋`handoff.md` | 每個 session |
-| L2 | GitHub | he22527/japan-road-vibration（私有） | 指定時 |
+| L2 | GitHub | he22527/japan-road-vibration（**公開**，2026-11-18 起）；網頁：https://he22527.github.io/japan-road-vibration/ | 指定時 |
 | L3 | Obsidian | 日本道路交通振動評估APP/專案工作流程.md | 有需要時 |
 
 ## 工作約定
