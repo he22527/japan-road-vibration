@@ -1,7 +1,7 @@
 /* 批次計算／報表介面 */
 (function () {
   'use strict';
-  const B = window.RoadVibBatch, Rp = window.RoadVibReport;
+  const B = window.RoadVibBatch, Rp = window.RoadVibReport, S = window.RoadVibStore;
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const KEY = 'roadvib.batch.v1';
@@ -11,18 +11,23 @@
   const TAB_KEY = 'roadvib.tab';
   function showView(id) {
     document.querySelectorAll('.tabs [role=tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.view === id)));
-    ['singleView', 'batchView'].forEach((v) => { $('#' + v).hidden = v !== id; });
+    ['inputView', 'singleView', 'settingsView'].forEach((v) => { $('#' + v).hidden = v !== id; });
     try { localStorage.setItem(TAB_KEY, id); } catch (e) { /* 略 */ }
   }
   document.querySelectorAll('.tabs [role=tab]').forEach((b) => b.addEventListener('click', () => showView(b.dataset.view)));
-  try { if (localStorage.getItem(TAB_KEY) === 'batchView') showView('batchView'); } catch (e) { /* 略 */ }
+  try { const v = localStorage.getItem(TAB_KEY); if (v === 'settingsView' || v === 'inputView') showView(v); } catch (e) { /* 略 */ }
 
-  // ---------- 狀態 ----------
-  let state = { fileName: '', data: null, pairs: {}, combos: [], options: { fPlane: 6, fElev: 6, soil: '黏土', correction: true }, notes: {} };
+  // ---------- 狀態（道路與受體來自共用資料庫 store.js；這裡只存配對、勾選、設定、表註） ----------
+  let state = { pairs: {}, combos: [], options: { fPlane: 6, fElev: 6, soil: '黏土', correction: true }, notes: {} };
   let groups = [], sources = [], result = null;
+  let data = null; // 由共用資料庫轉出
 
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* 容量不足等：僅保留於本頁 */ } }
-  function load() { try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.data) state = Object.assign(state, s); } catch (e) { /* 略 */ } }
+  function save() {
+    try { const { pairs, combos, options, notes } = state; localStorage.setItem(KEY, JSON.stringify({ pairs, combos, options, notes })); } catch (e) { /* 容量不足等：僅保留於本頁 */ }
+  }
+  function load() {
+    try { const s = JSON.parse(localStorage.getItem(KEY)); if (s) { delete s.data; delete s.fileName; state = Object.assign(state, s); } } catch (e) { /* 略 */ }
+  }
 
   const comboKey = (sid, rec) => sid + '||' + rec;
   const comboSet = () => new Set(state.combos.map((c) => comboKey(c.sourceId, c.receiver)));
@@ -34,12 +39,9 @@
     const msg = $('#importMsg');
     $('#importStatus').textContent = '讀取中…';
     try {
-      const wb = window.XLSX.read(await file.arrayBuffer(), { type: 'array' });
-      const data = B.fromWorkbook(window.XLSX, wb);
-      if (!data.roads.length) throw new Error('「道路」工作表沒有可用的道路資料');
-      const g = B.groupRoads(data.roads);
-      state = Object.assign(state, { fileName: file.name, data, pairs: B.suggestPairs(g), combos: [] });
-      save();
+      const found = await window.RoadVibImport(file); // 共用匯入（依名稱／表頭辨識，只取代檔案裡有的表）
+      if (!found) { refresh(); return; } // 使用者取消
+      if (found.includes('道路')) { state.pairs = {}; state.combos = []; } // 道路重匯：配對與勾選重來
       msg.hidden = true;
       refresh();
     } catch (err) {
@@ -64,7 +66,7 @@
 
   // ---------- 配對表 ----------
   function renderPairs() {
-    const recs = state.data.receivers;
+    const recs = data.receivers;
     const set = comboSet();
     const planes = groups.filter((g) => g.side === 'plane');
     const elevs = groups.filter((g) => g.side === 'elevated');
@@ -97,8 +99,9 @@
     } else if (t.dataset.plane !== undefined) {
       const plane = t.dataset.plane;
       // 一個高架側只能配一個平面側：先解除它和其他平面側的配對
-      Object.keys(state.pairs).forEach((p) => { if (state.pairs[p] === t.value && p !== plane) delete state.pairs[p]; });
-      if (t.value) { state.pairs[plane] = t.value; migrate(t.value, plane); } else delete state.pairs[plane];
+      if (t.value) Object.keys(state.pairs).forEach((p) => { if (state.pairs[p] === t.value && p !== plane) state.pairs[p] = ''; });
+      // 空字串＝使用者刻意不配對（重新整理時不再自動建議）
+      if (t.value) { state.pairs[plane] = t.value; migrate(t.value, plane); } else state.pairs[plane] = '';
     } else if (t.dataset.elev !== undefined) {
       if (t.value) { state.pairs[t.value] = t.dataset.elev; migrate(t.dataset.elev, t.value); }
     }
@@ -118,8 +121,8 @@
   const notesFor = (k) => state.notes[k] || Rp.DEFAULT_NOTES[k];
 
   function compute() {
-    if (!state.data) return;
-    result = B.computeBatch(state.data, sources, state.combos, state.options);
+    if (!data) return;
+    result = B.computeBatch(data, sources, state.combos, Object.assign({}, state.options, { params: S.paramsMap(S.get()) }));
     const tables = Rp.buildTables(result, { correction: state.options.correction, notes: { now: notesFor('now'), construction: notesFor('construction'), operation: notesFor('operation') } });
     const iss = $('#issues');
     iss.hidden = !result.issues.length;
@@ -186,19 +189,33 @@
 
   // ---------- 整體刷新 ----------
   function refresh() {
-    const has = !!state.data;
+    const db = S.get();
+    data = B.fromAoa(S.toBatchAoa(db));
+    const has = data.roads.length > 0;
     ['#settingsCard', '#pairCard', '#resultCard'].forEach((s) => { $(s).hidden = !has; });
-    if (!has) return;
-    groups = B.groupRoads(state.data.roads);
+    if (!has) {
+      data = null;
+      $('#importStatus').textContent = '尚無道路資料：請匯入 Excel／CSV，或到「基本輸入 › 運輸道路」新增。';
+      return;
+    }
+    groups = B.groupRoads(data.roads);
+    // 新出現的併行平面側自動建議夥伴；已不存在的配對移除
+    const keys = new Set(groups.map((g) => g.key));
+    Object.keys(state.pairs).forEach((p) => { if (!keys.has(p) || (state.pairs[p] && !keys.has(state.pairs[p]))) delete state.pairs[p]; });
+    const sug = B.suggestPairs(groups);
+    Object.keys(sug).forEach((p) => { if (!(p in state.pairs) && !Object.values(state.pairs).includes(sug[p])) state.pairs[p] = sug[p]; });
     sources = B.buildSources(groups, state.pairs);
     const validIds = new Set(sources.map((s) => s.id));
-    state.combos = state.combos.filter((c) => validIds.has(c.sourceId));
-    const d = state.data;
-    $('#importStatus').textContent = `${state.fileName}：道路 ${d.roads.length} 筆（${groups.length} 條）、敏感受體 ${d.receivers.length} 個` +
-      (d.skipped && d.skipped.length ? `；略過無效列 ${d.skipped.join('、')}` : '');
+    const recNames = new Set(data.receivers.map((r) => r.name));
+    state.combos = state.combos.filter((c) => validIds.has(c.sourceId) && recNames.has(c.receiver));
+    // 「道路」表列號 = 資料列序 + 2
+    $('#importStatus').textContent = `${db.source || '自建資料'}：道路 ${data.roads.length} 筆（${groups.length} 條）、敏感受體 ${data.receivers.length} 個` +
+      (data.skipped && data.skipped.length ? `；略過道路型式無效的第 ${data.skipped.map((r) => r - 1).join('、')} 列` : '');
+    save();
     renderPairs();
     compute();
   }
+  window.addEventListener('roadvib:store', refresh);
 
   load();
   $('#optFPlane').value = state.options.fPlane;

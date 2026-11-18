@@ -3,7 +3,7 @@
   "private": true,
   "description": "日本建設省道路交通振動預測模式（網頁版）",
   "scripts": {
-    "test": "node --test web/test/calc.test.js web/test/batch.test.js"
+    "test": "node --test web/test/calc.test.js web/test/batch.test.js web/test/store.test.js"
   }
 }
 

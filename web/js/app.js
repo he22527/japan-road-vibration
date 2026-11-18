@@ -48,8 +48,11 @@
   const num = (name) => { const v = val(name).trim(); return v === '' ? NaN : Number(v); };
 
   function readInput() {
+    const S = window.RoadVibStore, db = S.get();
     return {
       type,
+      params: S.paramsMap(db),
+      criteriaTable: S.criteriaMap(db),
       R: num('R'),
       soil: val('soil'),
       planePiers: Number(val('planePiers')),
@@ -232,38 +235,52 @@
     URL.revokeObjectURL(a.href);
   });
 
-  // ---------- 位置地圖（Google 地圖嵌入，免金鑰；按「定位」才載入） ----------
-  const mapQ = $('#mapQuery');
-  function locate() {
-    const q = mapQ.value.trim();
-    if (!q) { mapQ.focus(); return; }
-    const t = $('#mapType').value;
-    const src = `https://maps.google.com/maps?q=${encodeURIComponent(q)}&t=${t}&z=16&hl=zh-TW&output=embed`;
-    let frame = $('#mapFrame iframe');
-    if (!frame) {
-      frame = document.createElement('iframe');
-      frame.title = 'Google 地圖';
-      frame.loading = 'lazy';
-      frame.referrerPolicy = 'no-referrer-when-downgrade';
-      $('#mapEmpty').hidden = true;
-      $('#mapFrame').appendChild(frame);
+  // ---------- 位置地圖（Google 地圖嵌入，免金鑰；按「定位」才載入；各分頁共用元件） ----------
+  function initMapCard(card) {
+    const q = card.querySelector('.map-q');
+    function locate() {
+      const text = q.value.trim();
+      if (!text) { q.focus(); return; }
+      const t = card.querySelector('.map-t').value;
+      let frame = card.querySelector('.map-frame iframe');
+      if (!frame) {
+        frame = document.createElement('iframe');
+        frame.title = 'Google 地圖';
+        frame.loading = 'lazy';
+        frame.referrerPolicy = 'no-referrer-when-downgrade';
+        card.querySelector('.map-empty').hidden = true;
+        card.querySelector('.map-frame').appendChild(frame);
+      }
+      frame.src = `https://maps.google.com/maps?q=${encodeURIComponent(text)}&t=${t}&z=16&hl=zh-TW&output=embed`;
+      const open = card.querySelector('.map-open');
+      open.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(text)}`;
+      open.hidden = false;
     }
-    frame.src = src;
-    const open = $('#mapOpen');
-    open.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
-    open.hidden = false;
+    card.querySelector('.map-go').addEventListener('click', locate);
+    card.querySelector('.map-t').addEventListener('change', () => { if (card.querySelector('.map-frame iframe')) locate(); });
+    q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); locate(); } });
+    const fromRoad = card.querySelector('.map-from-road');
+    if (fromRoad) fromRoad.addEventListener('click', () => {
+      const text = [val('road'), val('section')].map((s) => s.trim()).filter(Boolean).join(' ');
+      if (!text) { form.elements.road.focus(); return; }
+      q.value = text;
+      locate();
+    });
   }
-  $('#mapGo').addEventListener('click', locate);
-  $('#mapType').addEventListener('change', () => { if ($('#mapFrame iframe')) locate(); });
-  mapQ.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); locate(); } });
-  $('#mapFromRoad').addEventListener('click', () => {
-    const q = [val('road'), val('section')].map((s) => s.trim()).filter(Boolean).join(' ');
-    if (!q) { form.elements.road.focus(); return; }
-    mapQ.value = q;
-    locate();
-  });
+  document.querySelectorAll('.map-card').forEach(initMapCard);
   form.addEventListener('submit', (e) => e.preventDefault());
 
+  /** 橋腳數選單的 d 值跟著模式參數 */
+  function pierLabels() {
+    const P = window.RoadVibStore.paramsMap(window.RoadVibStore.get());
+    ['planePiers', 'e.piers'].forEach((n) => {
+      const o = form.elements[n].options;
+      o[0].text = `1（d = ${RV.paramsFor('單柱高架', P).d}）`;
+      o[1].text = `2 以上（d = ${RV.paramsFor('雙柱高架', P).d}）`;
+    });
+  }
+  pierLabels();
+  window.addEventListener('roadvib:store', () => { pierLabels(); update(); }); // 評估基準、模式參數改了要重算
   form.addEventListener('input', update);
   form.addEventListener('change', update);
   setType('平面');

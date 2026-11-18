@@ -37,6 +37,8 @@
 │   ├── css/style.css
 │   ├── js/calc.js                             計算核心（純函式）
 │   ├── js/app.js                              單筆計算介面
+│   ├── js/store.js                            共用資料庫（敏感受體／道路／測點／評估基準／模式參數）
+│   ├── js/data-ui.js                          單筆計算左側資料分頁與「帶入」選單
 │   ├── js/batch.js                            批次計算（Excel 解析、配對、摘要表資料）
 │   ├── js/report.js                           摘要表定義＋Word(.docx) 產生器
 │   ├── js/batch-ui.js                         批次計算／報表介面

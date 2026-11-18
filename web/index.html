@@ -13,17 +13,116 @@
       <p class="sub">日本建設省道路交通振動預測模式 · L<sub>V10</sub></p>
     </div>
     <nav class="tabs" role="tablist" aria-label="功能">
-      <button type="button" role="tab" data-view="singleView" aria-selected="true">單筆計算</button>
-      <button type="button" role="tab" data-view="batchView" aria-selected="false">批次計算／報表</button>
+      <button type="button" role="tab" data-view="inputView" aria-selected="false">基本輸入</button>
+      <button type="button" role="tab" data-view="singleView" aria-selected="true">計算</button>
+      <button type="button" role="tab" data-view="settingsView" aria-selected="false">設定</button>
     </nav>
   </header>
 
-  <main class="batch" id="batchView" hidden>
+  <!-- 基本輸入 -->
+  <div class="workspace" id="inputView" hidden>
+  <nav class="side-nav" aria-label="基本輸入分頁">
+    <button type="button" data-page="recPage" aria-current="page">敏感受體<span class="cnt" data-cnt="receivers"></span></button>
+    <button type="button" data-page="roadPage">運輸道路<span class="cnt" data-cnt="roads"></span></button>
+    <button type="button" data-page="pointPage">振動測點<span class="cnt" data-cnt="points"></span></button>
+    <p class="side-note muted">資料存在這台電腦的瀏覽器，單筆與批次計算共用。</p>
+  </nav>
+
+  <!-- 敏感受體 -->
+  <main class="page" id="recPage" hidden>
     <section class="card">
-      <h2>1. 匯入 Excel</h2>
-      <p class="muted hint">選舊版評估 xlsm／xlsx，讀取其中「道路」與「敏感受體」工作表。檔案只在你的瀏覽器裡讀取，不會上傳。</p>
+      <div class="list-head">
+        <h2>敏感受體</h2>
+        <div class="actions">
+          <label class="file-btn ghost-file"><input type="file" class="xls-import" accept=".xls,.xlsx,.xlsm,.csv"><span>匯入 Excel／CSV</span></label>
+          <button type="button" class="primary" data-add="receivers">新增一列</button>
+          <button type="button" class="ghost" data-clear="receivers">清空</button>
+        </div>
+      </div>
+      <p class="muted hint">欄位比照 xlsm「敏感受體」表。振動管制區與日／夜間評估基準依「設定 › 評估基準」查得；選參考測點會自「振動測點」帶入背景值（可再手改）。</p>
+      <div class="table-wrap"><table class="data-table" id="recTable"></table></div>
+    </section>
+    <section class="card map-card">
+      <h2>位置地圖</h2>
+      <div class="map-search">
+        <input class="map-q" type="search" placeholder="輸入敏感受體地址或地標，如：梧棲區中華路一段" aria-label="地圖搜尋">
+        <select class="map-t" aria-label="地圖類型"><option value="m">地圖</option><option value="k">衛星</option></select>
+        <button type="button" class="map-go primary">定位</button>
+      </div>
+      <div class="map-frame"><p class="muted map-empty">輸入地址或地標後按「定位」，地圖由 Google 地圖提供。</p></div>
+      <a class="map-open" target="_blank" rel="noopener" hidden>在 Google 地圖開啟 ↗</a>
+    </section>
+  </main>
+
+  <!-- 運輸道路 -->
+  <main class="page" id="roadPage" hidden>
+    <section class="card">
+      <div class="list-head">
+        <h2>運輸道路</h2>
+        <div class="actions">
+          <input type="search" id="roadFilter" class="filter" placeholder="篩選道路、路段、模擬狀況" aria-label="篩選運輸道路">
+          <label class="file-btn ghost-file"><input type="file" class="xls-import" accept=".xls,.xlsx,.xlsm,.csv"><span>匯入 Excel／CSV</span></label>
+          <button type="button" class="primary" data-add="roads">新增一列</button>
+          <button type="button" class="ghost" data-clear="roads">清空</button>
+        </div>
+      </div>
+      <p class="muted hint">欄位比照 xlsm「道路」表，每列一個模擬狀況 × 路段。小型車＝小客車＋小貨車、大型車＝大客車＋大貨車＋特殊車輛（填組成時自動加總）；平坦性欄在平面系當 σ、在高架當 H<sub>p</sub>；平面高架併行：橋腳數 0 為平面側、≥ 1 為高架側。</p>
+      <div class="table-wrap"><table class="data-table" id="roadTable"></table></div>
+    </section>
+    <section class="card map-card">
+      <h2>位置地圖</h2>
+      <div class="map-search">
+        <input class="map-q" type="search" placeholder="輸入道路名稱或路段，如：台61線 台64線～南堤聯外道路" aria-label="地圖搜尋">
+        <select class="map-t" aria-label="地圖類型"><option value="m">地圖</option><option value="k">衛星</option></select>
+        <button type="button" class="map-go primary">定位</button>
+      </div>
+      <div class="map-frame"><p class="muted map-empty">輸入道路名稱或路段後按「定位」，地圖由 Google 地圖提供。</p></div>
+      <a class="map-open" target="_blank" rel="noopener" hidden>在 Google 地圖開啟 ↗</a>
+    </section>
+  </main>
+
+  <!-- 振動測點 -->
+  <main class="page" id="pointPage" hidden>
+    <section class="card">
+      <div class="list-head">
+        <h2>振動測點</h2>
+        <div class="actions">
+          <label class="file-btn ghost-file"><input type="file" class="xls-import" accept=".xls,.xlsx,.xlsm,.csv"><span>匯入 Excel／CSV</span></label>
+          <button type="button" class="primary" data-add="points">新增一列</button>
+          <button type="button" class="ghost" data-clear="points">清空</button>
+        </div>
+      </div>
+      <p class="muted hint">欄位比照 xlsm「量測點」表，單位 dB。修改測點背景值後，到「敏感受體」重新選一次參考測點即可帶入新值。</p>
+      <div class="table-wrap"><table class="data-table" id="pointTable"></table></div>
+    </section>
+    <section class="card map-card">
+      <h2>位置地圖</h2>
+      <div class="map-search">
+        <input class="map-q" type="search" placeholder="輸入測點位置或地址，如：大崁腳加油站" aria-label="地圖搜尋">
+        <select class="map-t" aria-label="地圖類型"><option value="m">地圖</option><option value="k">衛星</option></select>
+        <button type="button" class="map-go primary">定位</button>
+      </div>
+      <div class="map-frame"><p class="muted map-empty">輸入測點位置或地址後按「定位」，地圖由 Google 地圖提供。</p></div>
+      <a class="map-open" target="_blank" rel="noopener" hidden>在 Google 地圖開啟 ↗</a>
+    </section>
+  </main>
+
+  </div>
+
+  <!-- 計算 -->
+  <div class="workspace" id="singleView">
+  <nav class="side-nav" aria-label="計算分頁">
+    <button type="button" data-page="calcPage" aria-current="page">單筆計算</button>
+    <button type="button" data-page="batchPage">批次計算／報表</button>
+    <p class="side-note muted">資料存在這台電腦的瀏覽器，單筆與批次計算共用。</p>
+  </nav>
+
+  <main class="page batch" id="batchPage" hidden>
+    <section class="card">
+      <h2>1. 資料來源</h2>
+      <p class="muted hint">道路與敏感受體和「基本輸入」的「運輸道路」「敏感受體」分頁共用，可在那裡逐筆修改。在這裡匯入 Excel（xls／xlsx／xlsm）或 CSV 會一併更新對應分頁（含振動測點、評估基準、模式參數）。檔案只在你的瀏覽器裡讀取，不會上傳。</p>
       <div class="row">
-        <label class="file-btn"><input type="file" id="xlsFile" accept=".xlsx,.xlsm,.xls"><span>選擇檔案…</span></label>
+        <label class="file-btn"><input type="file" id="xlsFile" accept=".xls,.xlsx,.xlsm,.csv"><span>匯入 Excel／CSV…</span></label>
         <span id="importStatus" class="muted"></span>
       </div>
       <div id="importMsg" class="notice" hidden></div>
@@ -65,11 +164,14 @@
     </section>
   </main>
 
-  <main class="layout" id="singleView">
+  <main class="layout page" id="calcPage">
     <!-- 輸入 -->
     <form id="form" class="panel inputs" autocomplete="off" novalidate>
       <section class="card">
         <h2>案例</h2>
+        <label class="picker"><span>從「運輸道路」帶入</span>
+          <select id="pickRoad"><option value="">（手動輸入）</option></select>
+          <small>帶入道路型式、車道數、交通量、車速、路面與平坦性；平面高架併行請平面側、高架側各選一次。</small></label>
         <div class="grid g3">
           <label><span>模擬狀況</span><input name="scenario" placeholder="如：現況晨峰"></label>
           <label><span>運輸道路</span><input name="road" placeholder="如：台61線"></label>
@@ -80,15 +182,15 @@
       <section class="card map-card">
         <h2>位置地圖</h2>
         <div class="map-search">
-          <input id="mapQuery" type="search" placeholder="輸入地址、道路名稱或地標，如：台中市梧棲區臨港路" aria-label="地圖搜尋">
-          <select id="mapType" aria-label="地圖類型"><option value="m">地圖</option><option value="k">衛星</option></select>
-          <button type="button" id="mapGo" class="primary">定位</button>
-          <button type="button" id="mapFromRoad" title="以「運輸道路＋路段」欄位搜尋">帶入道路</button>
+          <input class="map-q" type="search" placeholder="輸入地址、道路名稱或地標，如：台中市梧棲區臨港路" aria-label="地圖搜尋">
+          <select class="map-t" aria-label="地圖類型"><option value="m">地圖</option><option value="k">衛星</option></select>
+          <button type="button" class="map-go primary">定位</button>
+          <button type="button" class="map-from-road" title="以「運輸道路＋路段」欄位搜尋">帶入道路</button>
         </div>
-        <div class="map-frame" id="mapFrame">
-          <p class="muted map-empty" id="mapEmpty">輸入地址或道路名稱後按「定位」，地圖由 Google 地圖提供。</p>
+        <div class="map-frame">
+          <p class="muted map-empty">輸入地址或道路名稱後按「定位」，地圖由 Google 地圖提供。</p>
         </div>
-        <a id="mapOpen" class="map-open" target="_blank" rel="noopener" hidden>在 Google 地圖開啟 ↗</a>
+        <a class="map-open" target="_blank" rel="noopener" hidden>在 Google 地圖開啟 ↗</a>
       </section>
 
       <section class="card">
@@ -130,6 +232,9 @@
 
       <section class="card">
         <h2>預測點與評估</h2>
+        <label class="picker"><span>從「敏感受體」帶入</span>
+          <select id="pickRec"><option value="">（手動輸入）</option></select>
+          <small>帶入距離 R、噪音管制區，與所選時段的現況背景值。</small></label>
         <div class="grid g4">
           <label><span>敏感受體</span><input name="receiver" placeholder="如：瑞平國小"></label>
           <label><span>距基準點 R (m)</span><input name="R" type="number" step="0.1" value="5">
@@ -181,12 +286,45 @@
       </div>
     </section>
   </main>
+  </div>
+
+  <!-- 設定（上方分頁） -->
+  <main class="batch" id="settingsView" hidden>
+    <section class="card">
+      <div class="list-head">
+        <h2>評估基準</h2>
+        <div class="actions"><button type="button" class="ghost" data-reset="criteria">還原預設</button></div>
+      </div>
+      <p class="muted hint">噪音管制區 → 振動管制區與日／夜間評估基準（dB），比照 xlsm「評估基準」表。</p>
+      <div class="table-wrap"><table class="data-table narrow" id="critTable"></table></div>
+    </section>
+    <section class="card">
+      <div class="list-head">
+        <h2>模式參數</h2>
+        <div class="actions"><button type="button" class="ghost" data-reset="params">還原預設</button></div>
+      </div>
+      <p class="muted hint">基準值 = a·log(log Q*) + b·log V + c·log M + d，比照 xlsm「模式參數」表。修改後單筆與批次計算都會改用新值。</p>
+      <div class="table-wrap"><table class="data-table narrow" id="paramTable"></table></div>
+      <p class="muted hint note-par">平面高架併行：平面側取「平面」的 a、b、c，d 取高架側橋腳數對應的「單柱高架」或「雙柱高架」d（公式定案第 4 項，不採 xlsm 的 d = 29）。</p>
+    </section>
+    <section class="card">
+      <h2>資料匯入</h2>
+      <p class="muted hint">讀入 Excel（xls／xlsx／xlsm）的「敏感受體」「道路」「量測點」「評估基準」「模式參數」工作表，或表頭相符的單張 CSV，只取代檔案裡有的那幾張表。檔案只在瀏覽器裡讀取，不會上傳。</p>
+      <div class="row">
+        <label class="file-btn"><input type="file" class="xls-import" accept=".xls,.xlsx,.xlsm,.csv"><span>匯入 Excel／CSV…</span></label>
+        <span class="muted" id="storeStatus"></span>
+      </div>
+      <div id="storeMsg" class="notice" hidden></div>
+    </section>
+  </main>
 
   <footer class="foot muted">公式依 docs/VBA解析.md 第 4.5 節定案版本。清單與匯入資料只存在這台電腦的瀏覽器裡。</footer>
 
   <script src="js/calc.js"></script>
+  <script src="js/store.js"></script>
   <script src="js/app.js"></script>
   <script src="vendor/xlsx.full.min.js" defer></script>
+  <script src="js/data-ui.js" defer></script>
   <script src="vendor/jszip.min.js" defer></script>
   <script src="js/batch.js" defer></script>
   <script src="js/report.js" defer></script>

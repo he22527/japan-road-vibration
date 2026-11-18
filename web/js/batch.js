@@ -167,6 +167,7 @@
       if (!e) return { missing: true };
       input = { type: e.piers >= 2 ? '雙柱高架' : '單柱高架', R, elevated: elevInput(e, opt) };
     }
+    if (opt.params) input.params = opt.params;
     const res = RV.calculate(input);
     return res.ok ? { value: r1(res.lv10R), lv10: res.lv10 } : { error: res.errors.join('；') };
   }
@@ -215,6 +216,12 @@
   }
 
   /** 從 SheetJS workbook 物件讀出（瀏覽器與 Node 共用） */
+  /** 從共用資料庫（store.js）轉出的二維陣列讀出 */
+  function fromAoa(aoa) {
+    const { roads, skipped } = parseRoads(aoa.roads);
+    return { roads, skipped, receivers: parseReceivers(aoa.receivers) };
+  }
+
   function fromWorkbook(XLSX, wb) {
     const need = ['道路', '敏感受體'];
     const missing = need.filter((n) => !wb.Sheets[n]);
@@ -225,7 +232,7 @@
     return { roads, skipped, receivers };
   }
 
-  const api = { PHASES, parseScenario, baseRoadName, parseRoads, parseReceivers, groupRoads, suggestPairs, buildSources, predict, computeBatch, fromWorkbook };
+  const api = { PHASES, parseScenario, baseRoadName, parseRoads, parseReceivers, groupRoads, suggestPairs, buildSources, predict, computeBatch, fromWorkbook, fromAoa };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.RoadVibBatch = api;
 })(typeof window !== 'undefined' ? window : globalThis);

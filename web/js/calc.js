@@ -19,8 +19,26 @@
     '第四類': { zone: '第二種', day: 70, night: 65 },
   };
 
-  /** 橋腳數 → d（定案第 4 項：併行平面側同樣適用） */
-  const dByPiers = (piers) => (Number(piers) >= 2 ? 20 : 18);
+  /** 預設模式參數 a、b、c、d（xlsm「模式參數」表；平面高架併行列不採用，見定案第 4 項） */
+  const DEFAULT_PARAMS = {
+    '平面': { a: 65, b: 6, c: 4, d: 35 },
+    '填方': { a: 65, b: 6, c: 4, d: 35 },
+    '挖方': { a: 65, b: 6, c: 4, d: 35 },
+    '路塹': { a: 65, b: 6, c: 4, d: 35 },
+    '單柱高架': { a: 54, b: 6, c: 2, d: 18 },
+    '雙柱高架': { a: 54, b: 6, c: 2, d: 20 },
+  };
+
+  /** 取某路型常數：自訂值（四項皆為數字）優先，否則用預設 */
+  function paramsFor(type, params) {
+    const p = params && params[type];
+    if (p && [p.a, p.b, p.c, p.d].every(Number.isFinite)) return { a: p.a, b: p.b, c: p.c, d: p.d };
+    return Object.assign({}, DEFAULT_PARAMS[type]);
+  }
+  const elevType = (piers) => (Number(piers) >= 2 ? '雙柱高架' : '單柱高架');
+
+  /** 橋腳數 → d（定案第 4 項：併行平面側同樣適用；取單柱／雙柱高架的 d） */
+  const dByPiers = (piers, params) => paramsFor(elevType(piers), params).d;
 
   /** 等價交通量 Q*（輛/500s/車道） */
   function equivalentTraffic(Q1, Q2, M) {
@@ -87,8 +105,7 @@
 
   // ---------------- 單側計算 ----------------
   /** 平面系一側（平面／填方／挖方／路塹，或併行之平面側） */
-  function planeSide(type, t, kOverride) {
-    const k = kOverride || { a: 65, b: 6, c: 4, d: 35 };
+  function planeSide(type, t, k) {
     const Q = equivalentTraffic(t.Q1, t.Q2, t.M);
     const base = baseLevel(k, Q, t.V, t.M);
     const aSigma = alphaSigma(t.pavement, t.sigma);
@@ -99,8 +116,8 @@
   }
 
   /** 高架一側 */
-  function elevatedSide(t) {
-    const k = { a: 54, b: 6, c: 2, d: dByPiers(t.piers) };
+  function elevatedSide(t, params) {
+    const k = paramsFor(elevType(t.piers), params);
     const Q = equivalentTraffic(t.Q1, t.Q2, t.M);
     const base = baseLevel(k, Q, t.V, t.M);
     const aHp = alphaHp(t.Hp);
@@ -129,10 +146,12 @@
    *   elevated: { Q1, Q2, M, V, piers, Hp, f }               — 高架與併行
    *   planePiers: 併行時平面側採用之橋腳數（定 d）
    *   background, zone, period: 選填，影響評估用
+   *   params: 選填，{ 路型: {a,b,c,d} } 自訂模式參數（缺項用 DEFAULT_PARAMS）
+   *   criteriaTable: 選填，{ 噪音管制區: {zone, day, night} } 自訂評估基準（預設 CRITERIA）
    */
   function calculate(input) {
     const errors = [];
-    const { type } = input;
+    const { type, params } = input;
     check(errors, ROAD_TYPES.includes(type), '未知的道路型式：' + type);
     check(errors, Number.isFinite(input.R) && input.R > -5, '預測點距離 R 需 > −5 m');
 
@@ -155,18 +174,18 @@
 
     const out = { ok: true, type, R: input.R };
     if (PLANE_FAMILY.includes(type)) {
-      out.plane = planeSide(type, input.plane);
+      out.plane = planeSide(type, input.plane, paramsFor(type, params));
       out.lv10 = out.plane.lv;
       out.beta = beta(type, out.plane, input.soil);
     } else if (ELEVATED.includes(type)) {
       const e = Object.assign({}, input.elevated, { piers: type === '單柱高架' ? 1 : 2 });
-      out.elevated = elevatedSide(e);
+      out.elevated = elevatedSide(e, params);
       out.lv10 = out.elevated.lv;
       out.beta = beta(type, out.elevated);
     } else {
-      const kPlane = { a: 65, b: 6, c: 4, d: dByPiers(input.planePiers) };
+      const kPlane = Object.assign(paramsFor('平面', params), { d: dByPiers(input.planePiers, params) });
       out.plane = planeSide('平面', input.plane, kPlane);
-      out.elevated = elevatedSide(input.elevated);
+      out.elevated = elevatedSide(input.elevated, params);
       out.lv10 = energySum(out.plane.lv, out.elevated.lv);
       out.beta = beta(type, { lv: out.lv10 });
     }
@@ -178,7 +197,7 @@
       out.combined = energySum(input.background, out.lv10R);
       out.increment = out.combined - input.background;
     }
-    const crit = CRITERIA[input.zone];
+    const crit = (input.criteriaTable || CRITERIA)[input.zone];
     if (crit) {
       out.criteria = input.period === '夜間' ? crit.night : crit.day;
       out.judged = Number.isFinite(out.combined) ? out.combined : out.lv10R;
@@ -203,7 +222,7 @@
   const GRADE_LABEL = { pass: '符合', near: '接近', fail: '超過' };
 
   const api = {
-    ROAD_TYPES, PLANE_FAMILY, ELEVATED, CRITERIA,
+    ROAD_TYPES, PLANE_FAMILY, ELEVATED, CRITERIA, DEFAULT_PARAMS, paramsFor,
     equivalentTraffic, baseLevel, alphaSigma, alphaHp, alphaFPlane, alphaFElevated,
     alphaS, distanceFactor, energySum, dByPiers, calculate,
     NEAR_MARGIN, judge, GRADE_LABEL,
