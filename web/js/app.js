@@ -264,12 +264,17 @@
         card.querySelector('.map-frame').appendChild(frame);
       }
       frame.src = `https://maps.google.com/maps?q=${encodeURIComponent(text)}&t=${t}&z=16&hl=zh-TW&output=embed`;
+      frame.hidden = !!(measureCtl && measureCtl.active);
       const open = card.querySelector('.map-open');
       open.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(text)}`;
       open.hidden = false;
+      if (measureCtl && measureCtl.active) measureCtl.goto(text);
     }
     card.querySelector('.map-go').addEventListener('click', locate);
-    card.querySelector('.map-t').addEventListener('change', () => { if (card.querySelector('.map-frame iframe')) locate(); });
+    card.querySelector('.map-t').addEventListener('change', () => {
+      if (measureCtl) measureCtl.setLayer();
+      if (card.querySelector('.map-frame iframe')) locate();
+    });
     q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); locate(); } });
     const fromRoad = card.querySelector('.map-from-road');
     if (fromRoad) fromRoad.addEventListener('click', () => {
@@ -277,6 +282,111 @@
       if (!text) { form.elements.road.focus(); return; }
       q.value = text;
       locate();
+    });
+
+    // ---------- 量距離（Google 嵌入地圖不支援量測，改以 Leaflet＋OSM／Esri 衛星圖量測，免金鑰） ----------
+    const measureBtn = card.querySelector('.map-measure');
+    let measureCtl = null;
+    function initMeasure() {
+      const frameBox = card.querySelector('.map-frame');
+      const bar = document.createElement('div');
+      bar.className = 'map-measure-bar';
+      bar.innerHTML = '<span class="map-dist"></span>'
+        + '<button type="button" class="m-undo">復原</button>'
+        + '<button type="button" class="m-clear">清除</button>';
+      frameBox.before(bar);
+      const div = document.createElement('div');
+      div.className = 'map-lmap';
+      frameBox.appendChild(div);
+      const map = L.map(div, { doubleClickZoom: false }).setView([23.97, 120.98], 8);
+      const layers = {
+        m: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> 貢獻者' }),
+        k: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Esri, Maxar, Earthstar Geographics' }),
+      };
+      let curLayer = null;
+      function setLayer() {
+        const want = layers[card.querySelector('.map-t').value] || layers.m;
+        if (curLayer === want) return;
+        if (curLayer) map.removeLayer(curLayer);
+        curLayer = want.addTo(map);
+      }
+      setLayer();
+      L.control.scale({ imperial: false }).addTo(map);
+      const pts = [];
+      const dots = [];
+      const line = L.polyline([], { color: '#d3303f', weight: 3 }).addTo(map);
+      const dist = bar.querySelector('.map-dist');
+      const fmt = (m) => (m >= 1000 ? `${(m / 1000).toFixed(2)} 公里` : `${m >= 100 ? Math.round(m) : m.toFixed(1)} 公尺`);
+      function refresh() {
+        line.setLatLngs(pts);
+        if (!pts.length) { dist.textContent = '在地圖上點選各點開始量測'; return; }
+        if (pts.length === 1) { dist.textContent = '已選起點，再點下一點'; return; }
+        let total = 0;
+        for (let i = 1; i < pts.length; i++) total += pts[i - 1].distanceTo(pts[i]);
+        const last = pts[pts.length - 2].distanceTo(pts[pts.length - 1]);
+        dist.textContent = pts.length === 2
+          ? `距離 ${fmt(total)}`
+          : `總長 ${fmt(total)}（${pts.length} 點，最後一段 ${fmt(last)}）`;
+      }
+      map.on('click', (e) => {
+        pts.push(e.latlng);
+        dots.push(L.circleMarker(e.latlng, { radius: 5, color: '#d3303f', weight: 2, fillColor: '#fff', fillOpacity: 1 }).addTo(map));
+        refresh();
+      });
+      bar.querySelector('.m-undo').addEventListener('click', () => {
+        pts.pop();
+        const d = dots.pop();
+        if (d) map.removeLayer(d);
+        refresh();
+      });
+      bar.querySelector('.m-clear').addEventListener('click', () => {
+        pts.length = 0;
+        while (dots.length) map.removeLayer(dots.pop());
+        refresh();
+      });
+      async function gotoText(text) {
+        if (!text) return;
+        dist.textContent = '定位中…';
+        try {
+          const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=zh-TW&q=${encodeURIComponent(text)}`);
+          const j = await r.json();
+          if (j && j[0]) { map.setView([+j[0].lat, +j[0].lon], 16); refresh(); }
+          else dist.textContent = `找不到「${text}」，請拖曳、縮放地圖後直接點選`;
+        } catch { dist.textContent = '定位失敗（量測地圖需要網路），可直接拖曳地圖'; }
+      }
+      refresh();
+      measureCtl = {
+        active: false,
+        setLayer,
+        goto: gotoText,
+        located: false,
+        start() {
+          this.active = true;
+          bar.hidden = false;
+          div.hidden = false;
+          const iframeEl = frameBox.querySelector('iframe');
+          if (iframeEl) iframeEl.hidden = true;
+          card.querySelector('.map-empty').hidden = true;
+          measureBtn.textContent = '結束量測';
+          map.invalidateSize();
+          const text = mapQuery();
+          if (text && !this.located) { this.located = true; gotoText(text); }
+        },
+        stop() {
+          this.active = false;
+          bar.hidden = true;
+          div.hidden = true;
+          measureBtn.textContent = '量距離';
+          const iframeEl = frameBox.querySelector('iframe');
+          if (iframeEl) iframeEl.hidden = false;
+          else card.querySelector('.map-empty').hidden = false;
+        },
+      };
+    }
+    if (measureBtn) measureBtn.addEventListener('click', () => {
+      if (!window.L) { alert('量測元件載入中或無法載入（需要網路連線），請稍後再試。'); return; }
+      if (!measureCtl) initMeasure();
+      if (measureCtl.active) measureCtl.stop(); else measureCtl.start();
     });
   }
   document.querySelectorAll('.map-card').forEach(initMapCard);

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>道路交通振動評估</title>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="vendor/leaflet.css">
 </head>
 <body>
   <header class="topbar">
@@ -50,6 +51,7 @@
         <input class="map-q" type="search" placeholder="輸入敏感受體地址或地標，如：中華路一段" aria-label="地圖搜尋">
         <select class="map-t" aria-label="地圖類型"><option value="m">地圖</option><option value="k">衛星</option></select>
         <button type="button" class="map-go primary">定位</button>
+        <button type="button" class="map-measure" title="在地圖上逐點點選，量測受體與道路間的距離">量距離</button>
         <button type="button" class="map-add" data-add-from-map="receivers" title="以搜尋的地點新增一列敏感受體">新增為敏感受體</button>
       </div>
       <div class="map-frame"><p class="muted map-empty">選縣市、區鄉鎮或輸入地址後按「定位」，地圖由 Google 地圖提供。</p></div>
@@ -80,6 +82,7 @@
         <input class="map-q" type="search" placeholder="輸入道路名稱或路段，如：台61線" aria-label="地圖搜尋">
         <select class="map-t" aria-label="地圖類型"><option value="m">地圖</option><option value="k">衛星</option></select>
         <button type="button" class="map-go primary">定位</button>
+        <button type="button" class="map-measure" title="在地圖上逐點點選，量測距離">量距離</button>
         <button type="button" class="map-add" data-add-from-map="roads" title="以搜尋的道路新增一列運輸道路">新增為運輸道路</button>
       </div>
       <div class="map-frame"><p class="muted map-empty">選縣市、區鄉鎮或輸入道路名稱後按「定位」，地圖由 Google 地圖提供。</p></div>
@@ -109,6 +112,7 @@
         <input class="map-q" type="search" placeholder="輸入測點位置或地址，如：大崁腳加油站" aria-label="地圖搜尋">
         <select class="map-t" aria-label="地圖類型"><option value="m">地圖</option><option value="k">衛星</option></select>
         <button type="button" class="map-go primary">定位</button>
+        <button type="button" class="map-measure" title="在地圖上逐點點選，量測距離">量距離</button>
         <button type="button" class="map-add" data-add-from-map="points" title="以搜尋的地點新增一列振動測點">新增為振動測點</button>
       </div>
       <div class="map-frame"><p class="muted map-empty">選縣市、區鄉鎮或輸入測點位置後按「定位」，地圖由 Google 地圖提供。</p></div>
@@ -194,6 +198,7 @@
           <input class="map-q" type="search" placeholder="輸入地址、道路名稱或地標，如：台中市梧棲區臨港路" aria-label="地圖搜尋">
           <select class="map-t" aria-label="地圖類型"><option value="m">地圖</option><option value="k">衛星</option></select>
           <button type="button" class="map-go primary">定位</button>
+          <button type="button" class="map-measure" title="在地圖上逐點點選，量測距離">量距離</button>
           <button type="button" class="map-from-road" title="以「運輸道路＋路段」欄位搜尋">帶入道路</button>
         </div>
         <div class="map-frame">
@@ -329,6 +334,7 @@
 
   <footer class="foot muted">公式依 docs/VBA解析.md 第 4.5 節定案版本。清單與匯入資料只存在這台電腦的瀏覽器裡。</footer>
 
+  <script src="vendor/leaflet.js" defer></script>
   <script src="js/calc.js"></script>
   <script src="js/tw-districts.js"></script>
   <script src="js/store.js"></script>
