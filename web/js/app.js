@@ -70,19 +70,62 @@
   }
   const group = (t) => `<tr class="group"><td colspan="2">${t}</td></tr>`;
 
-  function sideRows(s, isPlane) {
+  // 公式＋代入值（第二行），讓計算過程可追溯
+  const n = (x) => esc(String(x));
+  const sub = (formula, substituted) => `${formula}<br>= ${substituted}`;
+
+  function fFormula(f, plane) {
+    if (plane) {
+      if (f >= 8) return sub('f ≥ 8：−20·log f', `−20·log ${n(f)}`);
+      if (f >= 4) return 'f = 4～8：−18';
+      return sub('f &lt; 4：−24 + 10·log f', `−24 + 10·log ${n(f)}`);
+    }
+    if (f >= 8) return sub('f ≥ 8：−5·log f', `−5·log ${n(f)}`);
+    if (f >= 4) return 'f = 4～8：−4.5';
+    return sub('f &lt; 4：−6 + 2.5·log f', `−6 + 2.5·log ${n(f)}`);
+  }
+
+  const S_FORMULA = { '填方': ['−1.4·H − 1.3', '−1.4'], '挖方': ['−0.87·H − 1.7', '−0.87'], '路塹': ['−4.7·H + 5.9', '−4.7'] };
+
+  function sideRows(s, t, isPlane, sideType) {
     const k = s.k;
-    let h = row('等價交通量 Q*', fmt(s.Q, 1), '(500/3600)(1/M)(Q₁+12Q₂)');
-    h += row('基準值', fmt(s.base), `${k.a}·log(logQ*) + ${k.b}·logV + ${k.c}·logM + ${k.d}`);
+    let h = row('等價交通量 Q*', fmt(s.Q, 1),
+      sub('(500/3600)·(1/M)·(Q₁ + 12·Q₂)', `(500/3600)·(1/${n(t.M)})·(${n(t.Q1)} + 12×${n(t.Q2)})`));
+    h += row('基準值', fmt(s.base),
+      sub(`${k.a}·log(log Q*) + ${k.b}·log V + ${k.c}·log M + ${k.d}`,
+        `${k.a}·log(log ${fmt(s.Q, 1)}) + ${k.b}·log ${n(t.V)} + ${k.c}·log ${n(t.M)} + ${k.d}`));
     if (isPlane) {
-      h += row('α<sub>σ</sub> 路面平坦性', sgn(s.aSigma));
-      h += row('α<sub>f</sub> 地盤卓越振動數', sgn(s.aF));
-      if (s.aS) h += row('α<sub>s</sub> 道路構造', sgn(s.aS));
+      const c = t.pavement === '混凝土' ? 18 : 14;
+      h += row('α<sub>σ</sub> 路面平坦性', sgn(s.aSigma),
+        t.sigma <= 1 ? `σ = ${n(t.sigma)} ≤ 1 → 0` : sub(`${esc(t.pavement)}：${c}·log σ`, `${c}·log ${n(t.sigma)}`));
+      h += row('α<sub>f</sub> 地盤卓越振動數', sgn(s.aF), fFormula(t.f, true));
+      if (s.aS) {
+        const [fx, a] = S_FORMULA[sideType];
+        h += row('α<sub>s</sub> 道路構造', sgn(s.aS), sub(`${sideType}：${fx}`, fx.replace(/^−[\d.]+·H/, `${a}×${n(t.H)}`)));
+      }
     } else {
-      h += row('α<sub>Hp</sub> 接縫高低差', sgn(s.aHp));
-      h += row('α<sub>f</sub> 地盤卓越振動數', sgn(s.aF));
+      h += row('α<sub>Hp</sub> 接縫高低差', sgn(s.aHp), sub('0.4·log Hp', `0.4·log ${n(t.Hp)}`));
+      h += row('α<sub>f</sub> 地盤卓越振動數', sgn(s.aF), fFormula(t.f, false));
     }
     return h;
+  }
+
+  const BETA_FORMULA = {
+    '平面': (soil) => soil === '砂質' ? ['砂質：0.119·L<sub>V10</sub> − 3.2', '0.119'] : ['黏土：0.06·L<sub>V10</sub> − 1.6', '0.06'],
+    '填方': () => ['0.077·L<sub>V10</sub> − 1.8', '0.077'],
+    '挖方': () => ['0.134·L<sub>V10</sub> − 3.2', '0.134'],
+    '路塹': () => ['0.058·L<sub>V10</sub> − 1.6', '0.058'],
+  };
+  function betaFormula(r, soil) {
+    const [fx, a] = (BETA_FORMULA[type] || (() => ['0.072·L<sub>V10</sub> − 2.2', '0.072']))(soil);
+    const lv = type === '平面' ? r.plane.lvPlane : r.lv10;
+    return sub(fx, fx.replace(/^.*?([\d.]+)·L<sub>V10<\/sub>/, `${a}×${fmt(lv, 2)}`));
+  }
+
+  function verdictText(r, period) {
+    const m = r.margin;
+    const what = Number.isFinite(r.combined) ? '合成值' : '預測值';
+    return `${RV.GRADE_LABEL[r.grade]} ${period}基準 ${r.criteria} dB（${what}${m >= 0 ? '餘裕' : '超出'} ${fmt(Math.abs(m))} dB）`;
   }
 
   function update() {
@@ -104,27 +147,33 @@
     const chip = $('#verdict');
     if (r.criteria !== undefined) {
       chip.hidden = false;
-      chip.className = 'chip ' + (r.pass ? 'pass' : 'fail');
-      chip.textContent = (r.pass ? '符合' : '超過') + ` ${input.period}基準 ${r.criteria} dB`;
+      chip.className = 'chip ' + r.grade;
+      chip.textContent = verdictText(r, input.period);
     } else chip.hidden = true;
 
+    const par = type === '平面高架併行';
     let h = '';
-    if (r.plane) h += group(type === '平面高架併行' ? '平面側' : '基準點（距車道 5 m）') + sideRows(r.plane, true);
-    if (r.elevated) h += group(type === '平面高架併行' ? '高架側' : '基準點（距車道 5 m）') + sideRows(r.elevated, false);
+    if (r.plane) h += group(par ? '平面側' : '基準點（距車道 5 m）') + sideRows(r.plane, input.plane, true, par ? '平面' : type);
+    if (r.elevated) h += group(par ? '高架側' : '基準點（距車道 5 m）') + sideRows(r.elevated, input.elevated, false);
     if (type === '平面高架併行') {
       h += row('L′<sub>V10</sub>(併‧平)', fmt(r.plane.lv));
       h += row('L′<sub>V10</sub>(高)', fmt(r.elevated.lv));
     }
     h += row(type === '平面高架併行' ? '基準點 L<sub>V10</sub>（合成）' : '基準點 L<sub>V10</sub>', fmt(r.lv10), type === '平面高架併行' ? '10·log(10^(平/10)+10^(高/10))' : '', 'total');
     h += group('距離衰減');
-    h += row('β', fmt(r.beta, 3));
-    h += row('α<sub>l</sub> 衰減量', '−' + fmt(r.alphaL), `β·log(R/5+1)/log2，R = ${fmt(input.R)} m`);
+    h += row('β 距離衰減係數', fmt(r.beta, 3), betaFormula(r, input.soil));
+    h += row('α<sub>l</sub> 衰減量', '−' + fmt(r.alphaL), sub('β·log(R/5 + 1) / log 2', `${fmt(r.beta, 3)}·log(${n(input.R)}/5 + 1) / log 2`));
     h += row('預測點 L<sub>V10,R</sub>', fmt(r.lv10R), '', 'total');
     if (Number.isFinite(r.combined)) {
       h += group('影響評估');
       h += row('背景振動量', fmt(input.background));
       h += row('合成振動量', fmt(r.combined), '10·log(10^(背景/10)+10^(預測/10))');
       h += row('振動增量', sgn(r.increment));
+    }
+    if (r.criteria !== undefined) {
+      h += group('基準判定');
+      h += row(`${esc(input.zone)}管制區 ${esc(input.period)}基準`, r.criteria + ' dB');
+      h += row('餘裕（基準 − 判定值）', sgn(r.margin), `餘裕 ≤ ${RV.NEAR_MARGIN} dB 標示為「接近」`, 'total');
     }
     $('#breakdown').innerHTML = h;
   }
@@ -139,7 +188,8 @@
       ...input.meta, type: input.type, R: input.R,
       lv10: r.lv10, alphaL: r.alphaL, lv10R: r.lv10R,
       combined: r.combined, increment: r.increment, criteria: r.criteria,
-      verdict: r.criteria === undefined ? '' : (r.pass ? '符合' : '超過'),
+      verdict: r.criteria === undefined ? '' : RV.GRADE_LABEL[r.grade],
+      grade: r.grade, margin: r.margin,
       period: input.period, zone: input.zone, background: input.background,
     };
   }
@@ -154,7 +204,8 @@
       <td>${esc(x.type)}</td><td>${esc(x.receiver)}</td>
       <td class="num">${fmt(x.R)}</td><td class="num">${fmt(x.lv10)}</td><td class="num">−${fmt(x.alphaL)}</td>
       <td class="num"><b>${fmt(x.lv10R)}</b></td><td class="num">${fmt(x.combined)}</td><td class="num">${fmt(x.increment)}</td>
-      <td class="num">${x.criteria ?? '—'}</td><td>${esc(x.verdict)}</td>
+      <td class="num">${x.criteria ?? '—'}</td><td class="num">${x.criteria === undefined ? '—' : sgn(x.margin)}</td>
+      <td>${x.verdict ? `<span class="chip sm ${x.grade || (x.verdict === '符合' ? 'pass' : 'fail')}">${esc(x.verdict)}</span>` : ''}</td>
       <td><button type="button" class="del" data-i="${i}" title="刪除" aria-label="刪除第 ${i + 1} 筆">×</button></td>
     </tr>`).join('');
   }
@@ -171,7 +222,7 @@
     const cols = [['scenario', '模擬狀況'], ['road', '運輸道路'], ['section', '路段'], ['type', '道路型式'], ['receiver', '敏感受體'],
       ['R', '距基準點R(m)'], ['lv10', '基準點LV10'], ['alphaL', '距離衰減αl'], ['lv10R', '預測值LV10_R'],
       ['background', '背景振動量'], ['combined', '合成振動量'], ['increment', '振動增量'], ['zone', '噪音管制區'],
-      ['period', '時段'], ['criteria', '評估基準'], ['verdict', '判定']];
+      ['period', '時段'], ['criteria', '評估基準'], ['margin', '餘裕(dB)'], ['verdict', '判定']];
     const cell = (v) => { const s = typeof v === 'number' ? (Number.isFinite(v) ? fmt(v) : '') : String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
     const csv = [cols.map((c) => c[1]).join(',')].concat(list.map((x) => cols.map((c) => cell(x[c[0]])).join(','))).join('\r\n');
     const a = document.createElement('a');
@@ -180,6 +231,38 @@
     a.click();
     URL.revokeObjectURL(a.href);
   });
+
+  // ---------- 位置地圖（Google 地圖嵌入，免金鑰；按「定位」才載入） ----------
+  const mapQ = $('#mapQuery');
+  function locate() {
+    const q = mapQ.value.trim();
+    if (!q) { mapQ.focus(); return; }
+    const t = $('#mapType').value;
+    const src = `https://maps.google.com/maps?q=${encodeURIComponent(q)}&t=${t}&z=16&hl=zh-TW&output=embed`;
+    let frame = $('#mapFrame iframe');
+    if (!frame) {
+      frame = document.createElement('iframe');
+      frame.title = 'Google 地圖';
+      frame.loading = 'lazy';
+      frame.referrerPolicy = 'no-referrer-when-downgrade';
+      $('#mapEmpty').hidden = true;
+      $('#mapFrame').appendChild(frame);
+    }
+    frame.src = src;
+    const open = $('#mapOpen');
+    open.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+    open.hidden = false;
+  }
+  $('#mapGo').addEventListener('click', locate);
+  $('#mapType').addEventListener('change', () => { if ($('#mapFrame iframe')) locate(); });
+  mapQ.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); locate(); } });
+  $('#mapFromRoad').addEventListener('click', () => {
+    const q = [val('road'), val('section')].map((s) => s.trim()).filter(Boolean).join(' ');
+    if (!q) { form.elements.road.focus(); return; }
+    mapQ.value = q;
+    locate();
+  });
+  form.addEventListener('submit', (e) => e.preventDefault());
 
   form.addEventListener('input', update);
   form.addEventListener('change', update);

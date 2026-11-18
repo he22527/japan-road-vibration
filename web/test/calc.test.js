@@ -72,6 +72,16 @@ test('影響評估：合成、增量、基準判定', () => {
   near(r.combined, V.energySum(50, r.lv10R), 1e-9);
   assert.equal(r.criteria, 60);
   assert.equal(r.pass, r.combined <= 60);
+  near(r.margin, 60 - r.combined, 1e-9);
+  assert.ok(['pass', 'near', 'fail'].includes(r.grade));
+});
+
+test('三段判定：符合／接近／超過（餘裕門檻 3 dB）', () => {
+  assert.deepEqual(V.judge(55, 60), { pass: true, margin: 5, grade: 'pass' });
+  assert.equal(V.judge(57, 60).grade, 'near'); // 餘裕剛好 3 dB 算接近
+  assert.equal(V.judge(60, 60).grade, 'near'); // 等於基準仍算符合（接近）
+  assert.equal(V.judge(60.1, 60).grade, 'fail');
+  near(V.judge(62, 60).margin, -2, 1e-9);
 });
 
 // Excel 第 4 列（台15線）的 LV10 欄沒有隨車速更新，只比對 LV10_R

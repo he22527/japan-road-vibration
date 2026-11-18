@@ -12,9 +12,60 @@
       <h1>道路交通振動評估</h1>
       <p class="sub">日本建設省道路交通振動預測模式 · L<sub>V10</sub></p>
     </div>
+    <nav class="tabs" role="tablist" aria-label="功能">
+      <button type="button" role="tab" data-view="singleView" aria-selected="true">單筆計算</button>
+      <button type="button" role="tab" data-view="batchView" aria-selected="false">批次計算／報表</button>
+    </nav>
   </header>
 
-  <main class="layout">
+  <main class="batch" id="batchView" hidden>
+    <section class="card">
+      <h2>1. 匯入 Excel</h2>
+      <p class="muted hint">選舊版評估 xlsm／xlsx，讀取其中「道路」與「敏感受體」工作表。檔案只在你的瀏覽器裡讀取，不會上傳。</p>
+      <div class="row">
+        <label class="file-btn"><input type="file" id="xlsFile" accept=".xlsx,.xlsm,.xls"><span>選擇檔案…</span></label>
+        <span id="importStatus" class="muted"></span>
+      </div>
+      <div id="importMsg" class="notice" hidden></div>
+    </section>
+
+    <section class="card" id="settingsCard" hidden>
+      <h2>2. 計算設定</h2>
+      <div class="grid g4">
+        <label><span>平面系 地盤卓越振動數 f (Hz)</span><input id="optFPlane" type="number" step="0.1" min="0" value="6"></label>
+        <label><span>高架 地盤卓越振動數 f (Hz)</span><input id="optFElev" type="number" step="0.1" min="0" value="6"></label>
+        <label><span>地質（平面道路）</span><select id="optSoil"><option>黏土</option><option>砂質</option></select></label>
+        <label class="check"><input id="optCorr" type="checkbox" checked><span>套用現況修正（量測值 − 預測值）</span></label>
+      </div>
+      <p class="muted hint">車速取（小型車車速＋大型車車速）÷ 2；路面平坦性欄位在平面系當 σ、在高架當 H<sub>p</sub>；每個時段（晨峰／昏峰）各自用同時段的現況預測值求修正量。</p>
+    </section>
+
+    <section class="card" id="pairCard" hidden>
+      <div class="list-head">
+        <h2>3. 道路與敏感受體配對</h2>
+        <div class="actions"><button type="button" id="clearPairs" class="ghost">清除勾選</button></div>
+      </div>
+      <p class="muted hint">勾選每條道路要評估的敏感受體。平面高架併行道路請確認「併行夥伴」。</p>
+      <div class="table-wrap"><table class="pair-table" id="pairTable"></table></div>
+    </section>
+
+    <section class="card" id="resultCard" hidden>
+      <div class="list-head">
+        <h2>4. 摘要表</h2>
+        <div class="actions">
+          <label class="check"><input type="checkbox" class="docSel" value="now" checked><span>現況</span></label>
+          <label class="check"><input type="checkbox" class="docSel" value="construction" checked><span>施工</span></label>
+          <label class="check"><input type="checkbox" class="docSel" value="operation" checked><span>營運</span></label>
+          <button type="button" id="docxBtn" class="primary">匯出 Word</button>
+          <button type="button" id="batchCsvBtn">匯出 CSV</button>
+        </div>
+      </div>
+      <div id="issues" class="notice" hidden></div>
+      <div id="reportTables"></div>
+    </section>
+  </main>
+
+  <main class="layout" id="singleView">
     <!-- 輸入 -->
     <form id="form" class="panel inputs" autocomplete="off" novalidate>
       <section class="card">
@@ -24,6 +75,20 @@
           <label><span>運輸道路</span><input name="road" placeholder="如：台61線"></label>
           <label><span>路段</span><input name="section" placeholder="如：台64線～南堤聯外道路"></label>
         </div>
+      </section>
+
+      <section class="card map-card">
+        <h2>位置地圖</h2>
+        <div class="map-search">
+          <input id="mapQuery" type="search" placeholder="輸入地址、道路名稱或地標，如：台中市梧棲區臨港路" aria-label="地圖搜尋">
+          <select id="mapType" aria-label="地圖類型"><option value="m">地圖</option><option value="k">衛星</option></select>
+          <button type="button" id="mapGo" class="primary">定位</button>
+          <button type="button" id="mapFromRoad" title="以「運輸道路＋路段」欄位搜尋">帶入道路</button>
+        </div>
+        <div class="map-frame" id="mapFrame">
+          <p class="muted map-empty" id="mapEmpty">輸入地址或道路名稱後按「定位」，地圖由 Google 地圖提供。</p>
+        </div>
+        <a id="mapOpen" class="map-open" target="_blank" rel="noopener" hidden>在 Google 地圖開啟 ↗</a>
       </section>
 
       <section class="card">
@@ -108,7 +173,7 @@
           <thead><tr>
             <th>#</th><th>模擬狀況</th><th>道路／路段</th><th>型式</th><th>敏感受體</th>
             <th class="num">R</th><th class="num">L<sub>V10</sub></th><th class="num">α<sub>l</sub></th>
-            <th class="num">L<sub>V10,R</sub></th><th class="num">合成</th><th class="num">增量</th><th class="num">基準</th><th>判定</th><th></th>
+            <th class="num">L<sub>V10,R</sub></th><th class="num">合成</th><th class="num">增量</th><th class="num">基準</th><th class="num">餘裕</th><th>判定</th><th></th>
           </tr></thead>
           <tbody id="listBody"></tbody>
         </table>
@@ -117,9 +182,14 @@
     </section>
   </main>
 
-  <footer class="foot muted">公式依 docs/VBA解析.md 第 4.5 節定案版本。清單只存在這台電腦的瀏覽器裡。</footer>
+  <footer class="foot muted">公式依 docs/VBA解析.md 第 4.5 節定案版本。清單與匯入資料只存在這台電腦的瀏覽器裡。</footer>
 
   <script src="js/calc.js"></script>
   <script src="js/app.js"></script>
+  <script src="vendor/xlsx.full.min.js" defer></script>
+  <script src="vendor/jszip.min.js" defer></script>
+  <script src="js/batch.js" defer></script>
+  <script src="js/report.js" defer></script>
+  <script src="js/batch-ui.js" defer></script>
 </body>
 </html>

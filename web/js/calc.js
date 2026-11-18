@@ -181,16 +181,32 @@
     const crit = CRITERIA[input.zone];
     if (crit) {
       out.criteria = input.period === '夜間' ? crit.night : crit.day;
-      const judged = Number.isFinite(out.combined) ? out.combined : out.lv10R;
-      out.pass = judged <= out.criteria;
+      out.judged = Number.isFinite(out.combined) ? out.combined : out.lv10R;
+      Object.assign(out, judge(out.judged, out.criteria));
     }
     return out;
   }
+
+  /** 接近基準之餘裕門檻 (dB)：餘裕 ≤ 此值視為「接近」 */
+  const NEAR_MARGIN = 3;
+
+  /**
+   * 三段判定：pass（符合）／near（符合但餘裕 ≤ NEAR_MARGIN）／fail（超過）
+   * margin = 基準 − 判定值（正值＝尚有餘裕）
+   */
+  function judge(level, criteria) {
+    const margin = criteria - level;
+    const pass = level <= criteria;
+    const grade = !pass ? 'fail' : margin <= NEAR_MARGIN ? 'near' : 'pass';
+    return { pass, margin, grade };
+  }
+  const GRADE_LABEL = { pass: '符合', near: '接近', fail: '超過' };
 
   const api = {
     ROAD_TYPES, PLANE_FAMILY, ELEVATED, CRITERIA,
     equivalentTraffic, baseLevel, alphaSigma, alphaHp, alphaFPlane, alphaFElevated,
     alphaS, distanceFactor, energySum, dByPiers, calculate,
+    NEAR_MARGIN, judge, GRADE_LABEL,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.RoadVib = api;
