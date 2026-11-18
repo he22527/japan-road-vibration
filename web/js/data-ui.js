@@ -105,14 +105,15 @@
     S.commit(ME);
   }
 
-  function addRow(key) {
+  function addRow(key, prefill) {
     const rows = db()[key];
     const r = S.blankRow(TABLES[key].cols);
-    if (key === 'roads' && rows.length) { // 沿用上一列的道路設定，方便連續輸入不同模擬狀況
-      const last = rows[rows.length - 1];
+    if (key === 'roads' && rows.length) { // 沿用最後一個有效道路列的設定，方便連續輸入不同模擬狀況
+      const last = [...rows].reverse().find((x) => RV.ROAD_TYPES.includes(x.type)) || rows[rows.length - 1];
       ['road', 'section', 'width', 'type', 'H', 'piers', 'pavement', 'flat', 'M'].forEach((k) => { r[k] = last[k]; });
       r.road = String(last.road || '').replace(/_[^_]*$/, '');
     }
+    if (prefill) Object.assign(r, prefill);
     rows.push(r);
     S.commit(ME);
     renderTable(key);
@@ -129,6 +130,16 @@
     renderTable(b.dataset.del);
   }));
   $$('[data-add]').forEach((b) => b.addEventListener('click', () => addRow(b.dataset.add)));
+  // 地圖卡「新增為…」：以搜尋的地點開一列新資料，並順便定位
+  $$('.map-add').forEach((b) => b.addEventListener('click', () => {
+    const card = b.closest('.map-card');
+    const q = card.querySelector('.map-q');
+    const text = q.value.trim();
+    if (!text) { q.focus(); return; }
+    card.querySelector('.map-go').click();
+    const key = b.dataset.addFromMap;
+    addRow(key, key === 'roads' ? { road: text } : { name: text });
+  }));
   $$('[data-clear]').forEach((b) => b.addEventListener('click', () => {
     const k = b.dataset.clear, n = db()[k].length;
     if (!n || !confirm(`確定清空全部 ${n} 列？`)) return;
