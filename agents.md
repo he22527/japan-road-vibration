@@ -28,6 +28,8 @@
 ├── agents.md                                  專案藍圖（本檔）
 ├── handoff.md                                 交接檔
 ├── package.json                               npm test 設定
+├── 參考資料/
+│   └── 25_522.pdf                             參考文獻
 ├── docs/
 │   └── VBA解析.md                             既有 VBA 計算邏輯解析、問題清單、公式定案
 ├── web/                                       網頁版 APP
