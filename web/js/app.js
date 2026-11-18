@@ -319,10 +319,12 @@
       const fmt = (m) => (m >= 1000 ? `${(m / 1000).toFixed(2)} 公里` : `${m >= 100 ? Math.round(m) : m.toFixed(1)} 公尺`);
       function refresh() {
         line.setLatLngs(pts);
+        delete card.dataset.measureM; // 量測不足兩點時，「新增為敏感受體」不帶距離
         if (!pts.length) { dist.textContent = '在地圖上點選各點開始量測'; return; }
         if (pts.length === 1) { dist.textContent = '已選起點，再點下一點'; return; }
         let total = 0;
         for (let i = 1; i < pts.length; i++) total += pts[i - 1].distanceTo(pts[i]);
+        card.dataset.measureM = String(Math.round(total * 10) / 10);
         const last = pts[pts.length - 2].distanceTo(pts[pts.length - 1]);
         dist.textContent = pts.length === 2
           ? `距離 ${fmt(total)}`

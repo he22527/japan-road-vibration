@@ -140,7 +140,10 @@
     const key = b.dataset.addFromMap;
     const district = card.querySelector('.map-district');
     const name = ((district && district.value) || '') + text; // 受體／測點名稱帶上區鄉鎮
-    addRow(key, key === 'roads' ? { road: text } : { name });
+    const prefill = key === 'roads' ? { road: text } : { name };
+    const measured = Number(card.dataset.measureM); // 地圖量到的距離（公尺），由 app.js 量測模式寫入
+    if (key === 'receivers' && Number.isFinite(measured)) prefill.R = measured;
+    addRow(key, prefill);
   }));
   $$('[data-clear]').forEach((b) => b.addEventListener('click', () => {
     const k = b.dataset.clear, n = db()[k].length;
