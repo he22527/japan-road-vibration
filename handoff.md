@@ -24,4 +24,4 @@
 ## 🕐 最後更新
 - 時間：2026-11-18
 - 更新者：Claude Code @ PC10972（worktree 分支 claude/sensitive-receptor-image-upload-e8d90b）
-- Git push：⬜ 尚未推（量測距離帶入敏感受體功能在 worktree 分支，待 commit／合回 main）
+- Git push：✅ 已合回 main（PR #2：量測距離帶入＋「檔案」分頁，2026-11-19 合併；GitHub Pages 會自動更新）
