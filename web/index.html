@@ -191,20 +191,6 @@
       <div class="table-wrap"><table class="pair-table" id="pairTable"></table></div>
     </section>
 
-    <section class="card" id="resultCard" hidden>
-      <div class="list-head">
-        <h2>4. 摘要表</h2>
-        <div class="actions">
-          <label class="check"><input type="checkbox" class="docSel" value="now" checked><span>現況</span></label>
-          <label class="check"><input type="checkbox" class="docSel" value="construction" checked><span>施工</span></label>
-          <label class="check"><input type="checkbox" class="docSel" value="operation" checked><span>營運</span></label>
-          <button type="button" id="docxBtn" class="primary">匯出 Word</button>
-          <button type="button" id="batchCsvBtn">匯出 CSV</button>
-        </div>
-      </div>
-      <div id="issues" class="notice" hidden></div>
-      <div id="reportTables"></div>
-    </section>
   </main>
 
   <main class="layout page" id="calcPage">
@@ -335,9 +321,22 @@
   <!-- 輸出（上方分頁） -->
   <div class="workspace" id="outputView" hidden>
   <main class="page">
-    <section class="card">
-      <h2>輸出</h2>
-      <p class="muted hint">輸出功能規劃中。</p>
+    <p class="muted" id="outputEmpty" hidden>尚無道路資料：請先到「基本輸入」建立資料，並在「計算 › 批次計算／報表」完成配對。</p>
+    <section class="card" id="resultCard" hidden>
+      <div class="list-head">
+        <h2>摘要表</h2>
+        <div class="actions">
+          <label class="check"><input type="checkbox" class="docSel" value="now" checked><span>現況</span></label>
+          <label class="check"><input type="checkbox" class="docSel" value="construction" checked><span>施工</span></label>
+          <label class="check"><input type="checkbox" class="docSel" value="operation" checked><span>營運</span></label>
+          <button type="button" id="docxBtn" class="primary">匯出 Word</button>
+          <button type="button" id="xlsxBtn">匯出 Excel</button>
+          <button type="button" id="batchCsvBtn">匯出 CSV</button>
+        </div>
+      </div>
+      <p class="muted hint">資料來源、計算設定與配對在「計算 › 批次計算／報表」；勾選要匯出的表後按匯出。</p>
+      <div id="issues" class="notice" hidden></div>
+      <div id="reportTables"></div>
     </section>
   </main>
   </div>
