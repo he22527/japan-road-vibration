@@ -27,4 +27,4 @@
 ## 🕐 最後更新
 - 時間：2026-11-19
 - 更新者：Claude Code @ PC10972（worktree 分支 claude/calculation-model-calibration-742561）
-- Git push：⬜ 模式校估＋成長量校估尚未 commit／push（前批 PR #2～#7 皆已合回 main；GitHub Pages 會自動更新）
+- Git push：✅ 模式校估＋成長量校估已開 PR #8（he22527/japan-road-vibration，待合併；前批 PR #2～#7 皆已合回 main，合併後 GitHub Pages 會自動更新）
