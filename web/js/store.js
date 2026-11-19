@@ -183,6 +183,25 @@
     return { db, found };
   }
 
+  // ---------------- 匯出（「檔案」分頁的儲存；表頭與 fromWorkbook 對應，可往返） ----------------
+  function toWorkbook(XLSX, db) {
+    const aoa = (cols, rows, extra) => [cols.map((c) => c[1]).concat((extra || []).map((e) => e[0]))]
+      .concat(rows.map((r) => cols.map(([k]) => r[k] ?? null).concat((extra || []).map(([, f]) => f(r) ?? null))));
+    const wb = XLSX.utils.book_new();
+    const add = (name, rows) => XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), name);
+    add('道路', aoa(ROAD_COLS, db.roads));
+    add('敏感受體', aoa(RECEIVER_COLS, db.receivers, [
+      ['振動管制區', (r) => resolveReceiver(db, r).vzone], ['日間評估基準', (r) => resolveReceiver(db, r).day],
+      ['夜間評估基準', (r) => resolveReceiver(db, r).night], ['參考測點名稱', (r) => resolveReceiver(db, r).pointName],
+    ]));
+    add('量測點', aoa(POINT_COLS, db.points));
+    add('評估基準', [['噪音管制區', '振動管制區', '日間評估基準', '夜間評估基準']]
+      .concat(db.criteria.map((c) => [c.zone, c.vzone, c.day, c.night])));
+    add('模式參數', [['路型', 'A常數', 'B常數', 'C常數', 'D常數']]
+      .concat(db.params.map((p) => [p.type, p.a, p.b, p.c, p.d])));
+    return wb;
+  }
+
   /** 轉成批次計算用的二維陣列（沿用 batch.js 的解析，結果與直接讀 xlsm 一致） */
   function toBatchAoa(db) {
     const roads = [ROAD_COLS.map((c) => c[1])].concat(db.roads.map((r) => ROAD_COLS.map(([k]) => r[k])));
@@ -197,7 +216,7 @@
   const api = {
     ROAD_COLS, RECEIVER_COLS, POINT_COLS, PARAM_TYPES,
     empty, blankRow, defaultCriteria, defaultParams, criteriaMap, paramsMap,
-    BG_COLS, detectSheet, resolveReceiver, applyPoint, roadSpeed, sumVehicles, fromWorkbook, toBatchAoa,
+    BG_COLS, detectSheet, resolveReceiver, applyPoint, roadSpeed, sumVehicles, fromWorkbook, toWorkbook, toBatchAoa,
   };
 
   // ---------------- 瀏覽器：存取與事件 ----------------

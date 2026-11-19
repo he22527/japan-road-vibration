@@ -66,6 +66,17 @@ test('CSV／表頭辨識：無名稱工作表依表頭匯入', () => {
   assert.equal(full.db.roads.length, db.roads.length);
 });
 
+test('toWorkbook 匯出後可往返（檔案分頁的儲存格式）', () => {
+  const out = XLSX.write(S.toWorkbook(XLSX, db), { type: 'buffer', bookType: 'xlsx' });
+  const back = S.fromWorkbook(XLSX, XLSX.read(out, { type: 'buffer' }));
+  assert.deepEqual(back.found.sort(), ['敏感受體', '模式參數', '評估基準', '道路', '量測點'].sort());
+  assert.deepEqual(back.db.receivers, db.receivers);
+  assert.deepEqual(back.db.roads, db.roads);
+  assert.deepEqual(back.db.points, db.points);
+  assert.deepEqual(back.db.criteria, db.criteria);
+  assert.deepEqual(back.db.params, db.params);
+});
+
 test('自訂模式參數與評估基準', () => {
   const base = { type: '平面', R: 5, zone: '第一類', period: '日間', plane: { Q1: 761, Q2: 40, M: 4, V: 40, pavement: '瀝青', sigma: 5, f: 6 } };
   const a = V.calculate(base);

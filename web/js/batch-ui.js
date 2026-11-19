@@ -11,11 +11,11 @@
   const TAB_KEY = 'roadvib.tab';
   function showView(id) {
     document.querySelectorAll('.tabs [role=tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.view === id)));
-    ['inputView', 'singleView', 'settingsView'].forEach((v) => { $('#' + v).hidden = v !== id; });
+    ['fileView', 'inputView', 'singleView', 'settingsView'].forEach((v) => { $('#' + v).hidden = v !== id; });
     try { localStorage.setItem(TAB_KEY, id); } catch (e) { /* 略 */ }
   }
   document.querySelectorAll('.tabs [role=tab]').forEach((b) => b.addEventListener('click', () => showView(b.dataset.view)));
-  try { const v = localStorage.getItem(TAB_KEY); if (v === 'settingsView' || v === 'inputView') showView(v); } catch (e) { /* 略 */ }
+  try { const v = localStorage.getItem(TAB_KEY); if (['settingsView', 'inputView', 'fileView'].includes(v)) showView(v); } catch (e) { /* 略 */ }
 
   // ---------- 狀態（道路與受體來自共用資料庫 store.js；這裡只存配對、勾選、設定、表註） ----------
   let state = { pairs: {}, combos: [], options: { fPlane: 6, fElev: 6, soil: '黏土', correction: true }, notes: {} };
