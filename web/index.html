@@ -8,6 +8,16 @@
   <link rel="stylesheet" href="vendor/leaflet.css">
 </head>
 <body>
+  <div id="authGate" class="auth-gate">
+    <form id="authForm" class="auth-card">
+      <h2>道路交通振動評估</h2>
+      <p class="muted">請先登入</p>
+      <label>名稱<input id="authUser" autocomplete="username" required></label>
+      <label>密碼<input id="authPass" type="password" autocomplete="current-password" required></label>
+      <p class="auth-err" id="authErr" hidden>名稱或密碼錯誤</p>
+      <button type="submit" class="primary">登入</button>
+    </form>
+  </div>
   <header class="topbar">
     <div>
       <h1>道路交通振動評估</h1>
@@ -26,7 +36,7 @@
   <main class="page">
     <section class="card file-card">
       <h2>檔案</h2>
-      <p class="muted hint">把敏感受體、運輸道路、振動測點、評估基準與模式參數整份存成 Excel（.xlsx），或從檔案開啟。平常資料仍自動存在這台電腦的瀏覽器。</p>
+      <p class="muted hint">把整個專案——基本資料（敏感受體、運輸道路、振動測點、評估基準、模式參數）、單筆計算清單與批次設定——存成專案檔（.json），或從專案檔開啟；開啟也支援 Excel／CSV（只讀入基本資料）。平常資料仍自動存在這台電腦的瀏覽器。</p>
       <div class="file-actions">
         <button type="button" id="fileNew">新增</button>
         <button type="button" id="fileOpen" class="primary">開啟檔案</button>
@@ -353,6 +363,7 @@
 
   <footer class="foot muted">公式依 docs/VBA解析.md 第 4.5 節定案版本。清單與匯入資料只存在這台電腦的瀏覽器裡。</footer>
 
+  <script src="js/auth.js"></script>
   <script src="vendor/leaflet.js" defer></script>
   <script src="js/calc.js"></script>
   <script src="js/tw-districts.js"></script>
