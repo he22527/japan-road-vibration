@@ -33,16 +33,17 @@
 
   <!-- 檔案 -->
   <div class="workspace" id="fileView" hidden>
+  <nav class="side-nav" aria-label="檔案功能">
+    <button type="button" id="fileNew">新增</button>
+    <button type="button" id="fileOpen">開啟檔案</button>
+    <button type="button" id="fileSave">儲存檔案</button>
+    <button type="button" id="fileSaveAs">另存新檔</button>
+    <p class="side-note muted">專案檔（.json）含基本資料、計算清單與批次設定。</p>
+  </nav>
   <main class="page">
-    <section class="card file-card">
+    <section class="card">
       <h2>檔案</h2>
       <p class="muted hint">把整個專案——基本資料（敏感受體、運輸道路、振動測點、評估基準、模式參數）、單筆計算清單與批次設定——存成專案檔（.json），或從專案檔開啟；開啟也支援 Excel／CSV（只讀入基本資料）。平常資料仍自動存在這台電腦的瀏覽器。</p>
-      <div class="file-actions">
-        <button type="button" id="fileNew">新增</button>
-        <button type="button" id="fileOpen" class="primary">開啟檔案</button>
-        <button type="button" id="fileSave">儲存檔案</button>
-        <button type="button" id="fileSaveAs">另存新檔</button>
-      </div>
       <p class="muted" id="fileCurrent"></p>
       <p class="notice" id="fileMsg" hidden></p>
     </section>
