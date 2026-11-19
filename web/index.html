@@ -155,10 +155,55 @@
   <!-- 計算 -->
   <div class="workspace" id="singleView">
   <nav class="side-nav" aria-label="計算分頁">
+    <button type="button" data-page="calibPage">模式校估</button>
     <button type="button" data-page="calcPage" aria-current="page">單筆計算</button>
     <button type="button" data-page="batchPage">批次計算／報表</button>
     <p class="side-note muted">資料存在這台電腦的瀏覽器，單筆與批次計算共用。</p>
   </nav>
+
+  <main class="page batch" id="calibPage" hidden>
+    <section class="card">
+      <h2>模式校估</h2>
+      <p class="muted hint">以敏感受體「參考測點」的實測背景值，與模式在相同距離 R 的預測值（L<sub>V10,R</sub>）比較，求差異（實測 − 預測）作為修正量，供施工、營運階段修正預測值。道路與敏感受體資料來自「基本輸入」；併行道路的配對沿用「批次計算／報表」頁的設定。</p>
+      <div class="grid g4">
+        <label><span>道路（評估來源）</span><select id="calibSrc"></select></label>
+        <label><span>模擬狀況</span><select id="calibScenario"></select></label>
+        <label><span>實測值時段</span><select id="calibPeriod"><option>日間</option><option>夜間</option></select></label>
+        <label><span>地質（平面道路）</span><select id="calibSoil"><option>黏土</option><option>砂質</option></select></label>
+        <label><span>平面系 地盤卓越振動數 f (Hz)</span><input id="calibFPlane" type="number" step="0.1" min="0" value="6"></label>
+        <label><span>高架 地盤卓越振動數 f (Hz)</span><input id="calibFElev" type="number" step="0.1" min="0" value="6"></label>
+      </div>
+      <p class="notice" id="calibEmpty" hidden></p>
+    </section>
+
+    <section class="card" id="calibTableCard" hidden>
+      <div class="list-head">
+        <h2>實測與預測比較</h2>
+        <div class="actions"><button type="button" id="calibCsvBtn">匯出 CSV</button></div>
+      </div>
+      <p class="muted hint">實測值取各受體所選時段的現況背景值（在「基本輸入 › 敏感受體」選參考測點帶入，可手改）；取消勾選可將異常點排除於統計之外。</p>
+      <div class="table-wrap"><table class="list-table" id="calibTable"></table></div>
+    </section>
+
+    <section class="card" id="calibStatCard" hidden>
+      <h2>校估結果</h2>
+      <div class="calib-sum" id="calibStats"></div>
+      <p class="muted hint" id="calibApply"></p>
+    </section>
+
+    <section class="card" id="calibGrowCard" hidden>
+      <h2>成長量校估</h2>
+      <p class="muted hint">依年平均成長率推估施工年、營運年的交通量（現況交通量 × (1＋成長率)<sup>經過年數</sup>，小型車、大型車同率成長），以同一模式重算預測值；與現況預測值之差，即為交通成長量所增加的振動量。施工年、營運年可只填一個。</p>
+      <div class="grid g4">
+        <label><span>現況年</span><input id="calibYearNow" type="number" step="1"></label>
+        <label><span>施工年</span><input id="calibYearCon" type="number" step="1" placeholder="如：2028"></label>
+        <label><span>營運年</span><input id="calibYearOp" type="number" step="1" placeholder="如：2031"></label>
+        <label><span>年平均成長率 (%/年)</span><input id="calibGrowRate" type="number" step="0.1" placeholder="如：2"></label>
+      </div>
+      <p class="muted" id="calibGrowMsg"></p>
+      <div class="table-wrap"><table class="list-table" id="calibGrowTable"></table></div>
+    </section>
+  </main>
 
   <main class="page batch" id="batchPage" hidden>
     <section class="card">
@@ -385,5 +430,7 @@
   <script src="js/batch.js" defer></script>
   <script src="js/report.js" defer></script>
   <script src="js/batch-ui.js" defer></script>
+  <script src="js/calib.js" defer></script>
+  <script src="js/calib-ui.js" defer></script>
 </body>
 </html>
