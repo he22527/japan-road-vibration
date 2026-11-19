@@ -129,11 +129,11 @@
     iss.className = 'notice warn';
     iss.innerHTML = result.issues.length ? '部分組合無法計算：<ul>' + result.issues.map((s) => `<li>${esc(s)}</li>`).join('') + '</ul>' : '';
     if (!state.combos.length) {
-      $('#reportTables').innerHTML = '<p class="muted">在上方配對表勾選道路與敏感受體後，這裡會產生摘要表。</p>';
-      $('#docxBtn').disabled = $('#batchCsvBtn').disabled = true;
+      $('#reportTables').innerHTML = '<p class="muted">在「計算 › 批次計算／報表」的配對表勾選道路與敏感受體後，這裡會產生摘要表。</p>';
+      $('#docxBtn').disabled = $('#xlsxBtn').disabled = $('#batchCsvBtn').disabled = true;
       return;
     }
-    $('#docxBtn').disabled = $('#batchCsvBtn').disabled = false;
+    $('#docxBtn').disabled = $('#xlsxBtn').disabled = $('#batchCsvBtn').disabled = false;
     $('#reportTables').innerHTML = TABLE_KEYS.map((k) => {
       const t = tables[k];
       const critIdx = t.headers.length - 1;
@@ -174,6 +174,25 @@
     download(blob, `道路交通振動評估摘要表 ${stamp()}.docx`);
   });
 
+  // 匯出 Excel 輸出表：勾選的摘要表各成一張工作表（名稱比照樣本輸出表）
+  const XLSX_SHEET = { now: '現況輸出摘要表', construction: '施工輸出摘要表', operation: '營運輸出摘要表' };
+  $('#xlsxBtn').addEventListener('click', () => {
+    const sel = [...document.querySelectorAll('.docSel:checked')].map((x) => x.value);
+    if (!sel.length) { alert('請至少勾選一張表'); return; }
+    const X = window.XLSX;
+    const T = currentTables();
+    const num = (v) => (v !== '' && v !== null && Number.isFinite(Number(v)) ? Number(v) : v);
+    const wb = X.utils.book_new();
+    sel.forEach((k) => {
+      const t = T[k];
+      const aoa = [[t.title], [Rp.UNIT], t.headers.map((h) => h.replace(/\n/g, ''))]
+        .concat(t.rows.map((r) => r.map(num)))
+        .concat([[]], t.notes.filter((s) => String(s).trim()).map((s) => [s]));
+      X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet(aoa), XLSX_SHEET[k]);
+    });
+    X.writeFile(wb, `道路交通振動評估輸出表 ${stamp()}.xlsx`);
+  });
+
   $('#batchCsvBtn').addEventListener('click', () => {
     const T = currentTables();
     const cell = (s) => (/[",\n]/.test(s) ? `"${String(s).replace(/"/g, '""')}"` : s);
@@ -193,6 +212,7 @@
     data = B.fromAoa(S.toBatchAoa(db));
     const has = data.roads.length > 0;
     ['#settingsCard', '#pairCard', '#resultCard'].forEach((s) => { $(s).hidden = !has; });
+    $('#outputEmpty').hidden = has;
     if (!has) {
       data = null;
       $('#importStatus').textContent = '尚無道路資料：請匯入 Excel／CSV，或到「基本輸入 › 運輸道路」新增。';
