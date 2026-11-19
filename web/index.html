@@ -14,11 +14,30 @@
       <p class="sub">日本建設省道路交通振動預測模式 · L<sub>V10</sub></p>
     </div>
     <nav class="tabs" role="tablist" aria-label="功能">
+      <button type="button" role="tab" data-view="fileView" aria-selected="false">檔案</button>
       <button type="button" role="tab" data-view="inputView" aria-selected="false">基本輸入</button>
       <button type="button" role="tab" data-view="singleView" aria-selected="true">計算</button>
       <button type="button" role="tab" data-view="settingsView" aria-selected="false">設定</button>
     </nav>
   </header>
+
+  <!-- 檔案 -->
+  <div class="workspace" id="fileView" hidden>
+  <main class="page">
+    <section class="card file-card">
+      <h2>檔案</h2>
+      <p class="muted hint">把敏感受體、運輸道路、振動測點、評估基準與模式參數整份存成 Excel（.xlsx），或從檔案開啟。平常資料仍自動存在這台電腦的瀏覽器。</p>
+      <div class="file-actions">
+        <button type="button" id="fileNew">新增</button>
+        <button type="button" id="fileOpen" class="primary">開啟檔案</button>
+        <button type="button" id="fileSave">儲存檔案</button>
+        <button type="button" id="fileSaveAs">另存新檔</button>
+      </div>
+      <p class="muted" id="fileCurrent"></p>
+      <p class="notice" id="fileMsg" hidden></p>
+    </section>
+  </main>
+  </div>
 
   <!-- 基本輸入 -->
   <div class="workspace" id="inputView" hidden>
@@ -341,6 +360,7 @@
   <script src="js/app.js"></script>
   <script src="vendor/xlsx.full.min.js" defer></script>
   <script src="js/data-ui.js" defer></script>
+  <script src="js/file-ui.js" defer></script>
   <script src="vendor/jszip.min.js" defer></script>
   <script src="js/batch.js" defer></script>
   <script src="js/report.js" defer></script>

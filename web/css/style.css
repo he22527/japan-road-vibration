@@ -76,6 +76,10 @@ label.check input { width: auto; }
 
 /* 單筆計算：左側分頁 */
 .workspace { display: grid; grid-template-columns: 168px minmax(0, 1fr); max-width: 1600px; margin: 0 auto; align-items: start; }
+#fileView { grid-template-columns: minmax(0, 1fr); max-width: 760px; }
+.file-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.file-actions button { border: 1px solid var(--line); border-radius: 8px; padding: 9px 16px; background: var(--card); color: var(--ink); }
+.file-actions button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
 .side-nav { position: sticky; top: 0; display: flex; flex-direction: column; gap: 2px; padding: 16px 0 16px 16px; }
 .side-nav button {
   display: flex; justify-content: space-between; align-items: center; gap: 6px;
