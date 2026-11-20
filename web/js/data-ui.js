@@ -67,12 +67,13 @@
     head += '<th></th>';
     const body = rows.map((r, i) => {
       const x = T.resolve ? T.resolve(r) : {};
-      let h = `<td class="idx">${i + 1}</td>`;
+      const pickable = key === 'receivers';
+      let h = `<td class="idx"${pickable ? ' title="點選以選取此列；地圖量距離後會自動帶入「與基準點距離」"' : ''}>${i + 1}</td>`;
       T.cols.forEach(([k, , t]) => {
         h += cell(key, i, k, t, r[k]);
         (T.after && T.after[k] || []).forEach(([rk]) => { h += ro(rk, x[rk]); });
       });
-      return `<tr data-i="${i}">${h}${delBtn(key, i)}</tr>`;
+      return `<tr data-i="${i}"${pickable && i === selRec ? ' class="sel-row"' : ''}>${h}${delBtn(key, i)}</tr>`;
     }).join('');
     $(T.el).innerHTML = `<thead><tr>${head}</tr></thead><tbody>${body || `<tr><td colspan="99" class="muted empty-row">尚無資料。按「新增一列」或「匯入 Excel／CSV」。</td></tr>`}</tbody>`;
     if (key === 'roads') applyFilter();
@@ -105,32 +106,131 @@
     S.commit(ME);
   }
 
-  function addRow(key, prefill) {
+  function addRow(key, row) {
     const rows = db()[key];
-    const r = S.blankRow(TABLES[key].cols);
-    if (key === 'roads' && rows.length) { // 沿用最後一個有效道路列的設定，方便連續輸入不同模擬狀況
-      const last = [...rows].reverse().find((x) => RV.ROAD_TYPES.includes(x.type)) || rows[rows.length - 1];
-      ['road', 'section', 'width', 'type', 'H', 'piers', 'pavement', 'flat', 'M'].forEach((k) => { r[k] = last[k]; });
-      r.road = String(last.road || '').replace(/_[^_]*$/, '');
-    }
-    if (prefill) Object.assign(r, prefill);
-    rows.push(r);
+    rows.push(row);
     S.commit(ME);
     renderTable(key);
-    const first = $(`${TABLES[key].el} tr[data-i="${rows.length - 1}"] input, ${TABLES[key].el} tr[data-i="${rows.length - 1}"] select`);
-    if (first) { first.focus(); first.scrollIntoView({ block: 'nearest' }); }
+    const tr = $(`${TABLES[key].el} tr[data-i="${rows.length - 1}"]`);
+    if (tr) tr.scrollIntoView({ block: 'nearest' });
   }
+
+  // ---------- 新增一列彈窗（含預設值與常用值建議） ----------
+  const ADD_TITLE = { receivers: '新增敏感受體', roads: '新增運輸道路', points: '新增振動測點' };
+  const DEFAULTS = {
+    receivers: { zone: '第二類' },
+    roads: { type: '平面', pavement: '瀝青', piers: 0, M: 2 },
+    points: {},
+  };
+  const SUGGEST = {
+    receivers: { R: [10, 15, 20, 30, 50] },
+    roads: {
+      width: [7, 10, 15, 20, 30, 40], H: [0, 3, 5, 8], piers: [0, 1, 2], flat: [3, 5, 10],
+      M: [2, 4, 6, 8], vSmall: [40, 50, 60, 70, 80], vLarge: [40, 50, 60, 70, 80],
+    },
+    points: {},
+  };
+  const TEXT_SUGGEST = { scenario: ['現況', '施工', '營運'] };
+
+  const dlg = $('#addDialog');
+  let dlgKey = null;
+
+  /** 沿用最後一個有效道路列的設定，方便連續輸入不同模擬狀況 */
+  function lastRoadDefaults() {
+    const rows = db().roads;
+    if (!rows.length) return {};
+    const last = [...rows].reverse().find((x) => RV.ROAD_TYPES.includes(x.type)) || rows[rows.length - 1];
+    const r = {};
+    ['road', 'section', 'width', 'type', 'H', 'piers', 'pavement', 'flat', 'M'].forEach((k) => {
+      if (last[k] !== null && last[k] !== undefined && last[k] !== '') r[k] = last[k];
+    });
+    if (r.road) r.road = String(r.road).replace(/_[^_]*$/, '');
+    return r;
+  }
+
+  function fieldHtml(key, k, label, t, v) {
+    const id = `add-${k}`;
+    let inp;
+    if (OPTIONS[t]) {
+      const opts = OPTIONS[t]();
+      if (v && !opts.includes(v)) opts.push(v);
+      inp = `<select id="${id}" data-k="${k}">${opts.map((o) => `<option value="${esc(o)}"${o === v ? ' selected' : ''}>${esc(o || '—')}</option>`).join('')}</select>`;
+    } else {
+      const sug = t === 'num' ? (SUGGEST[key] || {})[k] : TEXT_SUGGEST[k];
+      const list = sug ? `<datalist id="${id}-l">${sug.map((o) => `<option value="${esc(o)}"></option>`).join('')}</datalist>` : '';
+      inp = `<input type="${t === 'num' ? 'number' : 'text'}"${t === 'num' ? ' step="any"' : ''} id="${id}" data-k="${k}" value="${esc(fmtCell(v))}"${sug ? ` list="${id}-l"` : ''}>${list}`;
+    }
+    return `<label class="add-field"><span>${esc(label)}</span>${inp}</label>`;
+  }
+
+  function openAdd(key, prefill) {
+    dlgKey = key;
+    const base = Object.assign(S.blankRow(TABLES[key].cols), DEFAULTS[key],
+      key === 'roads' ? lastRoadDefaults() : {}, prefill || {});
+    $('#addTitle').textContent = ADD_TITLE[key];
+    $('#addFields').innerHTML = TABLES[key].cols.map(([k, label, t]) => fieldHtml(key, k, label, t, base[k])).join('');
+    $('#addFields').classList.toggle('cols3', key === 'roads');
+    dlg.showModal();
+    const first = $('#addFields input, #addFields select');
+    if (first) first.focus();
+  }
+
+  // 彈窗內：選參考測點帶入背景值；填車流組成即時加總小型車／大型車
+  $('#addFields').addEventListener('change', (e) => {
+    const k = e.target.dataset.k;
+    if (dlgKey === 'receivers' && k === 'point') {
+      const tmp = S.applyPoint(db(), { point: e.target.value });
+      S.BG_COLS.forEach(([bk]) => { const el = $(`#add-${bk}`); if (el) el.value = fmtCell(tmp[bk]); });
+    }
+  });
+  $('#addFields').addEventListener('input', (e) => {
+    if (dlgKey !== 'roads' || !['car', 'van', 'bus', 'truck', 'special'].includes(e.target.dataset.k)) return;
+    const tmp = {};
+    ['car', 'van', 'bus', 'truck', 'special'].forEach((k) => { const el = $(`#add-${k}`); tmp[k] = el ? parse('num', el.value) : null; });
+    const sum = S.sumVehicles(tmp);
+    [['small', sum.small], ['large', sum.large]].forEach(([k, v]) => { const el = $(`#add-${k}`); if (el && v !== undefined) el.value = v; });
+  });
+  $('#addForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const row = S.blankRow(TABLES[dlgKey].cols);
+    $$('#addFields [data-k]').forEach((el) => { row[el.dataset.k] = parse(colType(TABLES[dlgKey].cols, el.dataset.k), el.value); });
+    if (dlgKey === 'roads') Object.assign(row, S.sumVehicles(row));
+    dlg.close();
+    addRow(dlgKey, row);
+  });
+  $('#addCancel').addEventListener('click', () => dlg.close());
+
+  // ---------- 敏感受體選取列：量距離後自動帶入與基準點距離 ----------
+  let selRec = null;
+  $('#recTable').addEventListener('click', (e) => {
+    const td = e.target.closest('td.idx');
+    if (!td || !td.parentElement.dataset.i) return;
+    const i = Number(td.parentElement.dataset.i);
+    selRec = selRec === i ? null : i;
+    renderTable('receivers');
+  });
+  document.addEventListener('roadvib:measure', (e) => {
+    const { key, meters } = e.detail || {};
+    if (key !== 'receivers' || selRec === null) return;
+    const r = db().receivers[selRec];
+    if (!r || !Number.isFinite(meters)) return;
+    r.R = meters;
+    S.commit(ME);
+    refreshRow('receivers', selRec);
+  });
 
   ['#recTable', '#roadTable', '#pointTable', '#critTable', '#paramTable'].forEach((s) => $(s).addEventListener('change', onCellChange));
   ['#recTable', '#roadTable', '#pointTable'].forEach((s) => $(s).addEventListener('click', (e) => {
     const b = e.target.closest('[data-del]');
     if (!b) return;
-    db()[b.dataset.del].splice(Number(b.dataset.i), 1);
+    const di = Number(b.dataset.i);
+    db()[b.dataset.del].splice(di, 1);
+    if (b.dataset.del === 'receivers' && selRec !== null) selRec = selRec === di ? null : selRec > di ? selRec - 1 : selRec;
     S.commit(ME);
     renderTable(b.dataset.del);
   }));
-  $$('[data-add]').forEach((b) => b.addEventListener('click', () => addRow(b.dataset.add)));
-  // 地圖卡「新增為…」：以搜尋的地點開一列新資料，並順便定位
+  $$('[data-add]').forEach((b) => b.addEventListener('click', () => openAdd(b.dataset.add)));
+  // 地圖卡「新增為…」：以搜尋的地點開彈窗新增，並順便定位
   $$('.map-add').forEach((b) => b.addEventListener('click', () => {
     const card = b.closest('.map-card');
     const q = card.querySelector('.map-q');
@@ -143,12 +243,13 @@
     const prefill = key === 'roads' ? { road: text } : { name };
     const measured = Number(card.dataset.measureM); // 地圖量到的距離（公尺），由 app.js 量測模式寫入
     if (key === 'receivers' && Number.isFinite(measured)) prefill.R = measured;
-    addRow(key, prefill);
+    openAdd(key, prefill);
   }));
   $$('[data-clear]').forEach((b) => b.addEventListener('click', () => {
     const k = b.dataset.clear, n = db()[k].length;
     if (!n || !confirm(`確定清空全部 ${n} 列？`)) return;
     db()[k] = [];
+    if (k === 'receivers') selRec = null;
     S.commit(ME);
     renderTable(k);
   }));

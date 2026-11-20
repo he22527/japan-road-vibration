@@ -325,6 +325,11 @@
         let total = 0;
         for (let i = 1; i < pts.length; i++) total += pts[i - 1].distanceTo(pts[i]);
         card.dataset.measureM = String(Math.round(total * 10) / 10);
+        // 通知資料分頁：有選取敏感受體列時，量到的距離直接帶入該列「與基準點距離」
+        const addBtn = card.querySelector('.map-add');
+        document.dispatchEvent(new CustomEvent('roadvib:measure', {
+          detail: { key: addBtn ? addBtn.dataset.addFromMap : '', meters: Math.round(total * 10) / 10 },
+        }));
         const last = pts[pts.length - 2].distanceTo(pts[pts.length - 1]);
         dist.textContent = pts.length === 2
           ? `距離 ${fmt(total)}`

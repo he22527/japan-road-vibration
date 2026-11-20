@@ -75,10 +75,25 @@ label.check input { width: auto; }
 .report .note-label { font-size: 12px; color: var(--muted); margin-top: 8px; display: block; }
 
 /* 單筆計算：左側分頁 */
-.workspace { display: grid; grid-template-columns: 168px minmax(0, 1fr); max-width: 1600px; margin: 0 auto; align-items: start; }
+.workspace { display: grid; grid-template-columns: 168px minmax(0, 1fr); max-width: 1600px; margin: 0; align-items: start; }
 #fileView .card { max-width: 900px; }
 #outputView { grid-template-columns: minmax(0, 1fr); }
 .side-nav button:disabled { opacity: .45; cursor: default; }
+
+/* 新增一列彈窗 */
+.add-dialog { border: 1px solid var(--line); border-radius: 12px; padding: 20px 24px; width: min(92vw, 640px); }
+.add-dialog::backdrop { background: rgba(0, 0, 0, .35); }
+.add-dialog h3 { margin: 0 0 14px; }
+.add-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; max-height: 62vh; overflow: auto; }
+.add-grid.cols3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.add-field { display: flex; flex-direction: column; gap: 4px; }
+.add-field > span { font-size: 12px; color: #6b6b6b; }
+.add-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+@media (max-width: 560px) { .add-grid, .add-grid.cols3 { grid-template-columns: 1fr; } }
+
+/* 敏感受體：點 # 欄選取列，量距離自動帶入距離 */
+#recTable td.idx { cursor: pointer; }
+#recTable tr.sel-row td { background: var(--accent-soft); }
 .side-nav button:disabled:hover { background: none; }
 .auth-gate { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; background: var(--bg); }
 .auth-card { display: flex; flex-direction: column; gap: 12px; width: min(320px, calc(100vw - 32px)); background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }
