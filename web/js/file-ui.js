@@ -34,8 +34,6 @@
     m.hidden = !text; m.className = 'notice' + (warn ? ' warn' : ''); m.textContent = text || '';
   }
   function refresh() {
-    const src = S.get().source;
-    $('#fileCurrent').textContent = (src ? `目前檔案：${src}` : '尚未開啟檔案') + '　·　' + TOTAL();
     $('#fileSave').disabled = !(hasFS && handle);
     $('#fileSave').title = hasFS ? (handle ? '存回目前開啟的專案檔（.json）' : '尚未開啟專案檔，請用「另存新檔」') : '這個瀏覽器不支援直接回存，請用「另存新檔」下載';
   }

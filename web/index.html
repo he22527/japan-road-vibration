@@ -44,7 +44,6 @@
     <section class="card">
       <h2>檔案</h2>
       <p class="muted hint">把整個專案——基本資料（敏感受體、運輸道路、振動測點、評估基準、模式參數）、單筆計算清單與批次設定——存成專案檔（.json），或從專案檔開啟；開啟也支援 Excel／CSV（只讀入基本資料）。</p>
-      <p class="muted" id="fileCurrent"></p>
       <p class="notice" id="fileMsg" hidden></p>
     </section>
   </main>
@@ -70,7 +69,6 @@
           <button type="button" class="ghost" data-clear="receivers">清空</button>
         </div>
       </div>
-      <p class="muted hint">欄位比照 xlsm「敏感受體」表。振動管制區與日／夜間評估基準依「設定 › 評估基準」查得；選參考測點會自「振動測點」帶入背景值（可再手改）。</p>
       <div class="table-wrap"><table class="data-table" id="recTable"></table></div>
     </section>
     <section class="card map-card">
@@ -101,7 +99,6 @@
           <button type="button" class="ghost" data-clear="roads">清空</button>
         </div>
       </div>
-      <p class="muted hint">欄位比照 xlsm「道路」表，每列一個模擬狀況 × 路段。小型車＝小客車＋小貨車、大型車＝大客車＋大貨車＋特殊車輛（填組成時自動加總）；平坦性欄在平面系當 σ、在高架當 H<sub>p</sub>；平面高架併行：橋腳數 0 為平面側、≥ 1 為高架側。</p>
       <div class="table-wrap"><table class="data-table" id="roadTable"></table></div>
     </section>
     <section class="card map-card">
@@ -131,7 +128,6 @@
           <button type="button" class="ghost" data-clear="points">清空</button>
         </div>
       </div>
-      <p class="muted hint">欄位比照 xlsm「量測點」表，單位 dB。修改測點背景值後，到「敏感受體」重新選一次參考測點即可帶入新值。</p>
       <div class="table-wrap"><table class="data-table" id="pointTable"></table></div>
     </section>
     <section class="card map-card">
@@ -157,14 +153,14 @@
   <nav class="side-nav" aria-label="計算分頁">
     <button type="button" data-page="calibPage">模式校估</button>
     <button type="button" data-page="calcPage" aria-current="page">單筆計算</button>
-    <button type="button" data-page="batchPage">批次計算／報表</button>
+    <button type="button" data-page="batchPage">批次計算</button>
     <p class="side-note muted">資料存在這台電腦的瀏覽器，單筆與批次計算共用。</p>
   </nav>
 
   <main class="page batch" id="calibPage" hidden>
     <section class="card">
       <h2>模式校估</h2>
-      <p class="muted hint">以敏感受體「參考測點」的實測背景值，與模式在相同距離 R 的預測值（L<sub>V10,R</sub>）比較，求差異（實測 − 預測）作為修正量，供施工、營運階段修正預測值。道路與敏感受體資料來自「基本輸入」；併行道路的配對沿用「批次計算／報表」頁的設定。</p>
+      <p class="muted hint">以敏感受體「參考測點」的實測背景值，與模式在相同距離 R 的預測值（L<sub>V10,R</sub>）比較，求差異（實測 − 預測）作為修正量，供施工、營運階段修正預測值。</p>
       <div class="grid g4">
         <label><span>道路（評估來源）</span><select id="calibSrc"></select></label>
         <label><span>模擬狀況</span><select id="calibScenario"></select></label>
