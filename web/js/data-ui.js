@@ -185,7 +185,13 @@
         key === 'roads' ? lastRoadDefaults() : {}, prefill || {});
     $('#addTitle').textContent = (dlgEdit !== null ? '編輯' : '新增') + ADD_TITLE[key].slice(2);
     $('#addSubmit').textContent = dlgEdit !== null ? '儲存' : '新增';
-    $('#addFields').innerHTML = TABLES[key].cols.map(([k, label, t]) => fieldHtml(key, k, label, t, base[k])).join('');
+    const fields = TABLES[key].cols.map(([k, label, t]) => fieldHtml(key, k, label, t, base[k]));
+    // 運輸道路：斷面示意圖放在「道路型式」那一排正下方，隨選擇切換
+    if (key === 'roads') {
+      const at = TABLES[key].cols.findIndex(([k]) => k === 'H') + 1;
+      fields.splice(at, 0, `<figure class="add-type-img"><img id="addTypeImg" src="img/${esc(base.type || '平面')}.jpg" alt="斷面示意圖"></figure>`);
+    }
+    $('#addFields').innerHTML = fields.join('');
     $('#addFields').classList.toggle('cols3', key === 'roads');
     dlg.showModal();
     const first = $('#addFields input, #addFields select');
@@ -198,6 +204,10 @@
     if (dlgKey === 'receivers' && k === 'point') {
       const tmp = S.applyPoint(db(), { point: e.target.value });
       S.BG_COLS.forEach(([bk]) => { const el = $(`#add-${bk}`); if (el) el.value = fmtCell(tmp[bk]); });
+    }
+    if (dlgKey === 'roads' && k === 'type') {
+      const img = $('#addTypeImg');
+      if (img && RV.ROAD_TYPES.includes(e.target.value)) img.src = `img/${e.target.value}.jpg`;
     }
   });
   $('#addFields').addEventListener('input', (e) => {

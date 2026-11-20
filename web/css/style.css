@@ -89,6 +89,8 @@ label.check input { width: auto; }
 .add-field { display: flex; flex-direction: column; gap: 4px; }
 .add-field > span { font-size: 12px; color: #6b6b6b; }
 .add-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.add-type-img { grid-column: 1 / -1; margin: 4px 0 0; text-align: center; }
+.add-type-img img { max-width: 100%; max-height: 220px; object-fit: contain; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
 @media (max-width: 560px) { .add-grid, .add-grid.cols3 { grid-template-columns: 1fr; } }
 
 /* 資料表：點 # 欄選取列（可多選）；敏感受體選一列時量距離自動帶入距離 */
