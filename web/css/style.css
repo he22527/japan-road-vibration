@@ -91,9 +91,15 @@ label.check input { width: auto; }
 .add-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 @media (max-width: 560px) { .add-grid, .add-grid.cols3 { grid-template-columns: 1fr; } }
 
-/* 敏感受體：點 # 欄選取列，量距離自動帶入距離 */
-#recTable td.idx { cursor: pointer; }
-#recTable tr.sel-row td { background: var(--accent-soft); }
+/* 資料表：點 # 欄選取列（可多選）；敏感受體選一列時量距離自動帶入距離 */
+#recTable td.idx, #roadTable td.idx, #pointTable td.idx { cursor: pointer; }
+#recTable tr.sel-row td, #roadTable tr.sel-row td, #pointTable tr.sel-row td { background: var(--accent-soft); }
+
+/* 資料列右鍵選單 */
+.ctx-menu { position: absolute; z-index: 50; min-width: 140px; background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgba(0, 0, 0, .15); padding: 4px; }
+.ctx-menu button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+.ctx-menu button:hover { background: var(--accent-soft); }
+#ctxDel:hover { background: #fde8ea; color: #b3261e; }
 .side-nav button:disabled:hover { background: none; }
 .auth-gate { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; background: var(--bg); }
 .auth-card { display: flex; flex-direction: column; gap: 12px; width: min(320px, calc(100vw - 32px)); background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }

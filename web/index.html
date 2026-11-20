@@ -413,6 +413,12 @@
   </main>
 
 
+  <!-- 資料列右鍵選單（編輯／刪除） -->
+  <div id="ctxMenu" class="ctx-menu" hidden>
+    <button type="button" id="ctxEdit">編輯</button>
+    <button type="button" id="ctxDel">刪除</button>
+  </div>
+
   <!-- 新增一列彈窗（敏感受體／運輸道路／振動測點共用） -->
   <dialog id="addDialog" class="add-dialog">
     <form id="addForm">
@@ -420,7 +426,7 @@
       <div class="add-grid" id="addFields"></div>
       <div class="add-actions">
         <button type="button" class="ghost" id="addCancel">取消</button>
-        <button type="submit" class="primary">新增</button>
+        <button type="submit" class="primary" id="addSubmit">新增</button>
       </div>
     </form>
   </dialog>

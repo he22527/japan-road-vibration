@@ -67,13 +67,15 @@
     head += '<th></th>';
     const body = rows.map((r, i) => {
       const x = T.resolve ? T.resolve(r) : {};
-      const pickable = key === 'receivers';
-      let h = `<td class="idx"${pickable ? ' title="點選以選取此列；地圖量距離後會自動帶入「與基準點距離」"' : ''}>${i + 1}</td>`;
+      const tip = key === 'receivers'
+        ? '點選以選取此列（可多選）；選一列時地圖量距離會自動帶入「與基準點距離」'
+        : '點選以選取此列（可多選）；右鍵可編輯／刪除';
+      let h = `<td class="idx" title="${tip}">${i + 1}</td>`;
       T.cols.forEach(([k, , t]) => {
         h += cell(key, i, k, t, r[k]);
         (T.after && T.after[k] || []).forEach(([rk]) => { h += ro(rk, x[rk]); });
       });
-      return `<tr data-i="${i}"${pickable && i === selRec ? ' class="sel-row"' : ''}>${h}${delBtn(key, i)}</tr>`;
+      return `<tr data-i="${i}"${sel[key].has(i) ? ' class="sel-row"' : ''}>${h}${delBtn(key, i)}</tr>`;
     }).join('');
     $(T.el).innerHTML = `<thead><tr>${head}</tr></thead><tbody>${body || `<tr><td colspan="99" class="muted empty-row">尚無資料。按「新增一列」或「匯入 Excel／CSV」。</td></tr>`}</tbody>`;
     if (key === 'roads') applyFilter();
@@ -122,8 +124,9 @@
     roads: { type: '平面', pavement: '瀝青', piers: 0, M: 2 },
     points: {},
   };
+  const R_STEPS = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]; // 與基準點距離選項：5 起、間隔 5
   const SUGGEST = {
-    receivers: { R: [10, 15, 20, 30, 50] },
+    receivers: { R: R_STEPS },
     roads: {
       width: [7, 10, 15, 20, 30, 40], H: [0, 3, 5, 8], piers: [0, 1, 2], flat: [3, 5, 10],
       M: [2, 4, 6, 8], vSmall: [40, 50, 60, 70, 80], vLarge: [40, 50, 60, 70, 80],
@@ -131,9 +134,17 @@
     points: {},
   };
   const TEXT_SUGGEST = { scenario: ['現況', '施工', '營運'] };
+  // 數值範圍：背景值 30–100 dB、與基準點距離 0–50 m
+  const BG_RANGE = Object.fromEntries(S.BG_COLS.map(([k]) => [k, { min: 30, max: 100 }]));
+  const RANGE = {
+    receivers: Object.assign({ R: { min: 0, max: 50 } }, BG_RANGE),
+    points: BG_RANGE,
+    roads: {},
+  };
 
   const dlg = $('#addDialog');
   let dlgKey = null;
+  let dlgEdit = null; // 編輯模式：被雙擊列的索引；null 為新增
 
   /** 沿用最後一個有效道路列的設定，方便連續輸入不同模擬狀況 */
   function lastRoadDefaults() {
@@ -158,16 +169,22 @@
     } else {
       const sug = t === 'num' ? (SUGGEST[key] || {})[k] : TEXT_SUGGEST[k];
       const list = sug ? `<datalist id="${id}-l">${sug.map((o) => `<option value="${esc(o)}"></option>`).join('')}</datalist>` : '';
-      inp = `<input type="${t === 'num' ? 'number' : 'text'}"${t === 'num' ? ' step="any"' : ''} id="${id}" data-k="${k}" value="${esc(fmtCell(v))}"${sug ? ` list="${id}-l"` : ''}>${list}`;
+      const rg = t === 'num' ? (RANGE[key] || {})[k] : null;
+      const rgAttr = rg ? ` min="${rg.min}" max="${rg.max}" title="${rg.min}～${rg.max}"` : '';
+      inp = `<input type="${t === 'num' ? 'number' : 'text'}"${t === 'num' ? ' step="any"' : ''}${rgAttr} id="${id}" data-k="${k}" value="${esc(fmtCell(v))}"${sug ? ` list="${id}-l"` : ''}>${list}`;
     }
     return `<label class="add-field"><span>${esc(label)}</span>${inp}</label>`;
   }
 
-  function openAdd(key, prefill) {
+  function openAdd(key, prefill, editIndex) {
     dlgKey = key;
-    const base = Object.assign(S.blankRow(TABLES[key].cols), DEFAULTS[key],
-      key === 'roads' ? lastRoadDefaults() : {}, prefill || {});
-    $('#addTitle').textContent = ADD_TITLE[key];
+    dlgEdit = Number.isInteger(editIndex) ? editIndex : null;
+    const base = dlgEdit !== null
+      ? Object.assign(S.blankRow(TABLES[key].cols), db()[key][dlgEdit])
+      : Object.assign(S.blankRow(TABLES[key].cols), DEFAULTS[key],
+        key === 'roads' ? lastRoadDefaults() : {}, prefill || {});
+    $('#addTitle').textContent = (dlgEdit !== null ? '編輯' : '新增') + ADD_TITLE[key].slice(2);
+    $('#addSubmit').textContent = dlgEdit !== null ? '儲存' : '新增';
     $('#addFields').innerHTML = TABLES[key].cols.map(([k, label, t]) => fieldHtml(key, k, label, t, base[k])).join('');
     $('#addFields').classList.toggle('cols3', key === 'roads');
     dlg.showModal();
@@ -196,27 +213,87 @@
     $$('#addFields [data-k]').forEach((el) => { row[el.dataset.k] = parse(colType(TABLES[dlgKey].cols, el.dataset.k), el.value); });
     if (dlgKey === 'roads') Object.assign(row, S.sumVehicles(row));
     dlg.close();
-    addRow(dlgKey, row);
+    if (dlgEdit !== null) {
+      const cur = db()[dlgKey][dlgEdit];
+      if (cur) { Object.assign(cur, row); S.commit(ME); renderTable(dlgKey); }
+    } else {
+      addRow(dlgKey, row);
+    }
   });
   $('#addCancel').addEventListener('click', () => dlg.close());
 
-  // ---------- 敏感受體選取列：量距離後自動帶入與基準點距離 ----------
-  let selRec = null;
-  $('#recTable').addEventListener('click', (e) => {
-    const td = e.target.closest('td.idx');
-    if (!td || !td.parentElement.dataset.i) return;
-    const i = Number(td.parentElement.dataset.i);
-    selRec = selRec === i ? null : i;
-    renderTable('receivers');
+  // 雙擊列（非輸入格的位置，如「#」欄）開啟彈窗編輯該列
+  Object.entries(TABLES).forEach(([key, T]) => {
+    $(T.el).addEventListener('dblclick', (e) => {
+      if (e.target.closest('input, select, button')) return; // 不干擾儲存格內的文字選取
+      const tr = e.target.closest('tr[data-i]');
+      if (!tr) return;
+      openAdd(key, null, Number(tr.dataset.i));
+    });
   });
+
+  // ---------- 選取列（三表共用，可多選）＋右鍵選單：編輯／刪除 ----------
+  const sel = { receivers: new Set(), roads: new Set(), points: new Set() };
+  Object.entries(TABLES).forEach(([key, T]) => {
+    $(T.el).addEventListener('click', (e) => {
+      const td = e.target.closest('td.idx');
+      if (!td || !td.parentElement.dataset.i) return;
+      const i = Number(td.parentElement.dataset.i);
+      if (sel[key].has(i)) sel[key].delete(i); else sel[key].add(i);
+      renderTable(key);
+    });
+  });
+
+  const ctxMenu = $('#ctxMenu');
+  let ctx = null; // { key, i }：右鍵所在的表與列
+  function hideCtx() { ctxMenu.hidden = true; ctx = null; }
+  Object.entries(TABLES).forEach(([key, T]) => {
+    $(T.el).addEventListener('contextmenu', (e) => {
+      const tr = e.target.closest('tr[data-i]');
+      if (!tr) return;
+      e.preventDefault();
+      const i = Number(tr.dataset.i);
+      if (!sel[key].has(i)) { sel[key].clear(); sel[key].add(i); renderTable(key); } // 未在選取中→改選此列
+      ctx = { key, i };
+      $('#ctxDel').textContent = sel[key].size > 1 ? `刪除選取的 ${sel[key].size} 列` : '刪除';
+      ctxMenu.hidden = false;
+      const mw = ctxMenu.offsetWidth, mh = ctxMenu.offsetHeight;
+      ctxMenu.style.left = Math.min(e.pageX, window.scrollX + document.documentElement.clientWidth - mw - 4) + 'px';
+      ctxMenu.style.top = Math.min(e.pageY, window.scrollY + document.documentElement.clientHeight - mh - 4) + 'px';
+    });
+  });
+  document.addEventListener('click', (e) => { if (!e.target.closest('#ctxMenu')) hideCtx(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideCtx(); });
+  window.addEventListener('scroll', hideCtx, true);
+  $('#ctxEdit').addEventListener('click', () => {
+    if (!ctx) return;
+    const { key, i } = ctx;
+    hideCtx();
+    openAdd(key, null, i);
+  });
+  $('#ctxDel').addEventListener('click', () => {
+    if (!ctx) return;
+    const { key } = ctx;
+    const idxs = [...sel[key]].sort((a, b) => b - a);
+    hideCtx();
+    if (!idxs.length) return;
+    if (!confirm(idxs.length > 1 ? `確定刪除選取的 ${idxs.length} 列？` : '確定刪除此列？')) return;
+    idxs.forEach((i) => db()[key].splice(i, 1));
+    sel[key].clear();
+    S.commit(ME);
+    renderTable(key);
+  });
+
+  // 選一列敏感受體時，地圖量距離自動帶入該列與基準點距離
   document.addEventListener('roadvib:measure', (e) => {
     const { key, meters } = e.detail || {};
-    if (key !== 'receivers' || selRec === null) return;
-    const r = db().receivers[selRec];
+    if (key !== 'receivers' || sel.receivers.size !== 1) return;
+    const i = [...sel.receivers][0];
+    const r = db().receivers[i];
     if (!r || !Number.isFinite(meters)) return;
     r.R = meters;
     S.commit(ME);
-    refreshRow('receivers', selRec);
+    refreshRow('receivers', i);
   });
 
   ['#recTable', '#roadTable', '#pointTable', '#critTable', '#paramTable'].forEach((s) => $(s).addEventListener('change', onCellChange));
@@ -225,7 +302,7 @@
     if (!b) return;
     const di = Number(b.dataset.i);
     db()[b.dataset.del].splice(di, 1);
-    if (b.dataset.del === 'receivers' && selRec !== null) selRec = selRec === di ? null : selRec > di ? selRec - 1 : selRec;
+    sel[b.dataset.del] = new Set([...sel[b.dataset.del]].filter((x) => x !== di).map((x) => (x > di ? x - 1 : x)));
     S.commit(ME);
     renderTable(b.dataset.del);
   }));
@@ -249,7 +326,7 @@
     const k = b.dataset.clear, n = db()[k].length;
     if (!n || !confirm(`確定清空全部 ${n} 列？`)) return;
     db()[k] = [];
-    if (k === 'receivers') selRec = null;
+    if (sel[k]) sel[k].clear();
     S.commit(ME);
     renderTable(k);
   }));
