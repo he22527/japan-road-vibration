@@ -163,7 +163,8 @@
     const id = `add-${k}`;
     let inp;
     if (OPTIONS[t]) {
-      const opts = OPTIONS[t]();
+      let opts = OPTIONS[t]();
+      if (t === 'type') opts = opts.filter((o) => o !== '平面高架併行'); // 彈窗不提供併行；併行以平面＋高架兩列分別輸入
       if (v && !opts.includes(v)) opts.push(v);
       inp = `<select id="${id}" data-k="${k}">${opts.map((o) => `<option value="${esc(o)}"${o === v ? ' selected' : ''}>${esc(o || '—')}</option>`).join('')}</select>`;
     } else {
